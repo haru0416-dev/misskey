@@ -69,15 +69,14 @@ export const Default = {
 			`時刻の軸ラベル: ${axisLabels.join(',')}`,
 		).toBe(true);
 
-		// 凡例は svg ではなく HTML 側に出る。
-		const summary = [...canvasElement.querySelectorAll('[class*="summaryLabel"]')].map((e) => e.textContent ?? '');
-		expect(summary.join(' ')).toContain('Notes');
-		expect(summary.join(' ')).toContain('Replies');
+		// 凡例は svg ではなく HTML 側に、系列の表示を切り替えるボタンとして出る。
+		const canvas = within(canvasElement);
+		expect(canvas.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-pressed', 'true');
+		expect(canvas.getByRole('button', { name: 'Replies' })).toHaveAttribute('aria-pressed', 'true');
 
 		// ホバーで tooltip が出る。描画だけ見ても回帰は捕まらない。
 		// 系列名は凡例にも出るので、tooltip にしか無い時刻で特定する
 		// (origin は UTC 0 時なので、CI の UTC でも JST でも日付は変わらない)。
-		const canvas = within(canvasElement);
 		await waitFor(() => expect(canvas.getByText(/2026-08-01/)).toBeInTheDocument());
 
 		// 時刻と系列は tooltip 内の別要素なので、両方を含む祖先まで辿る。

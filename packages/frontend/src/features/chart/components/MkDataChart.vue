@@ -5,16 +5,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<div v-if="summarySeries.length > 0" :class="$style.summary" class="_selectable">
-		<div v-for="item in summarySeries" :key="item.name" :class="$style.summaryItem">
-			<span :class="$style.summaryLabel"><span :class="$style.swatch" :style="{ backgroundColor: item.color }"></span>{{ item.name }}</span>
-			<strong :class="$style.summaryValue">{{ formatValue(item.latest) }}</strong>
-			<span v-if="item.delta !== 0" :class="[$style.delta, item.delta > 0 ? $style.positive : $style.negative]">
-				{{ item.delta > 0 ? '+' : '' }}{{ formatValue(item.delta) }}
-			</span>
-			<span :class="$style.peak">{{ chartText('peak') }} {{ formatValue(item.peak) }}</span>
-		</div>
-	</div>
 	<div v-if="normalizedSeries.length > 1" :class="$style.legend" role="group" :aria-label="chartText('series')">
 		<button
 			v-for="(series, index) in normalizedSeries"
@@ -39,20 +29,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 		role="img"
 		:aria-label="ariaLabel"
 	></div>
-	<details v-if="tableRows.length > 0" :class="$style.details">
-		<summary>{{ i18n.ts.details }}</summary>
-		<div :class="$style.tableScroller">
-			<table :class="$style.table">
-				<thead><tr><th>{{ i18n.ts.dateAndTime }}</th><th v-for="series in visibleSeries" :key="series.name">{{ series.name }}</th></tr></thead>
-				<tbody>
-					<tr v-for="row in tableRows" :key="row.time">
-						<th>{{ formatTime(row.time) }}</th>
-						<td v-for="(value, index) in row.values" :key="index">{{ formatValue(value) }}</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-	</details>
 	<div v-if="loading" :class="$style.loading"><MkLoading/></div>
 </div>
 </template>
@@ -77,7 +53,6 @@ import type { ECharts, EChartsCoreOption } from 'echarts/core';
 import { BarChart, LineChart } from 'echarts/charts';
 import { AriaComponent, DataZoomComponent, GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
-import { i18n } from '@/i18n.js';
 import { store } from '@/store.js';
 import { chartText } from '@/features/chart/chart-i18n.js';
 
@@ -132,47 +107,12 @@ const hasData = computed(() => visibleSeries.value.some((series) => series.data.
 const seriesColors = computed(() =>
 	normalizedSeries.value.map((series, index) => series.color ?? palette.value[index % palette.value.length]),
 );
-const summarySeries = computed(() =>
-	visibleSeries.value.slice(0, 5).map((series, index) => {
-		const values = series.data.map((point) => point.y);
-		const latest = values.at(-1) ?? 0;
-		return {
-			name: series.name,
-			latest,
-			delta: latest - (values.at(-2) ?? latest),
-			peak: Math.max(0, ...values),
-			color: series.color ?? palette.value[index % palette.value.length],
-		};
-	}),
-);
-const tableRows = computed(() => {
-	const times = [...new Set(visibleSeries.value.flatMap((series) => series.data.map((point) => point.x)))].sort(
-		(a, b) => b - a,
-	);
-	// 系列ごとに時刻で引く。時刻ごとに系列を先頭から探すと、点の数の 2 乗になる。
-	const valuesByTime = visibleSeries.value.map((series) => {
-		const values = new Map<number, number>();
-		for (const point of series.data) if (!values.has(point.x)) values.set(point.x, point.y);
-		return values;
-	});
-	return times.map((time) => ({
-		time,
-		values: valuesByTime.map((values) => values.get(time) ?? 0),
-	}));
-});
 
 function formatValue(value: number): string {
 	if (props.bytes) {
 		return `${new Intl.NumberFormat().format(value / 1000)} KB`;
 	}
 	return new Intl.NumberFormat().format(value);
-}
-
-function formatTime(value: number): string {
-	if (props.xAxisType === 'value') {
-		return String(value);
-	}
-	return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value);
 }
 
 function themeValue(name: string): string {
@@ -215,7 +155,8 @@ function render() {
 		color: palette.value,
 		aria: { enabled: true, description: props.ariaLabel },
 		textStyle: { color: fg, fontFamily: 'inherit' },
-		grid: { left: props.detailed ? 48 : 8, right: 12, top: 20, bottom: props.detailed ? 64 : 20, containLabel: false },
+		// ズームはドラッグとホイールだけでスライダーを出さないので、下は軸ラベルの高さだけ空ける
+		grid: { left: props.detailed ? 48 : 8, right: 12, top: 20, bottom: props.detailed ? 32 : 20, containLabel: false },
 		legend: { show: false },
 		tooltip: {
 			trigger: 'axis',
@@ -304,15 +245,7 @@ onBeforeUnmount(() => {
 
 <style lang="scss" module>
 .root { position: relative; min-width: 0; }
-.summary { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 12px; }
-.summaryItem { display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 8px; }
-.summaryLabel { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 0.82em; color: var(--MI_THEME-fg); opacity: 0.8; }
 .swatch { width: 8px; height: 8px; border-radius: 50%; }
-.summaryValue { font-size: 1.25em; color: var(--MI_THEME-fgHighlighted); font-variant-numeric: tabular-nums; }
-.delta { font-size: 0.78em; font-variant-numeric: tabular-nums; }
-.peak { grid-column: 1 / -1; font-size: 0.72em; color: var(--MI_THEME-fg); opacity: 0.65; }
-.positive { color: var(--MI_THEME-success); }
-.negative { color: var(--MI_THEME-error); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .legendButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 9px; border: 1px solid var(--MI_THEME-divider); border-radius: 999px; color: var(--MI_THEME-fg); background: var(--MI_THEME-panel); font: inherit; font-size: 0.82em; cursor: pointer; }
 .legendButton:hover, .legendButton:focus-visible { border-color: var(--MI_THEME-accent); }
@@ -320,12 +253,6 @@ onBeforeUnmount(() => {
 .empty { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--MI_THEME-fg); opacity: 0.65; }
 .empty > i { font-size: 2em; }
 .chart { width: 100%; min-height: 180px; }
-.details { margin-top: 8px; font-size: 0.9em; }
-.details > summary { width: fit-content; cursor: pointer; color: var(--MI_THEME-accent); }
-.tableScroller { margin-top: 8px; overflow-x: auto; overscroll-behavior-inline: contain; }
-.table { width: 100%; border-collapse: collapse; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.table th, .table td { padding: 7px 10px; border-bottom: 1px solid var(--MI_THEME-divider); text-align: end; }
-.table th:first-child { text-align: start; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--MI_THEME-panel) 75%, transparent); cursor: wait; }
-@media (max-width: 500px) { .summary { gap: 8px 14px; } .chart { min-height: 220px; } }
+@media (max-width: 500px) { .chart { min-height: 220px; } }
 </style>
