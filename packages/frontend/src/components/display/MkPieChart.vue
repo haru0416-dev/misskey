@@ -7,10 +7,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div :class="$style.root">
 	<div ref="chartEl" :class="$style.chart" role="img" :aria-label="ariaLabel"></div>
 	<ul :class="$style.legend">
-		<li v-for="item in data" :key="item.name">
+		<li v-for="(item, index) in data" :key="item.name">
 			<button type="button" :disabled="item.onClick == null" @click="item.onClick?.()">
-				<span :class="$style.swatch" :style="{ backgroundColor: item.color ?? 'var(--MI_THEME-fg)' }"></span>
-				<span>{{ item.name }}</span><strong>{{ numberFormat.format(item.value) }}</strong>
+				<span :class="$style.swatch" :style="{ backgroundColor: itemColors[index] }"></span>
+				<span :title="item.name">{{ item.name }}</span><strong>{{ numberFormat.format(item.value) }}</strong>
 			</button>
 		</li>
 	</ul>
@@ -29,6 +29,9 @@ import { i18n } from '@/i18n.js';
 use([PieChart, AriaComponent, TooltipComponent, SVGRenderer]);
 export type PieChartItem = { name: string; color: string | null; value: number; onClick?: () => void };
 const props = defineProps<{ data: PieChartItem[] }>();
+// ECharts 6 のデフォルトと同じ並び。凡例の丸と扇形を同じ色にするため、色の無い項目にはここから割り当てる
+const PALETTE = ['#5070dd', '#b6d634', '#505372', '#ff994d', '#0ca8df', '#ffd10a', '#fb628b', '#785db0', '#3fbe95'];
+const itemColors = computed(() => props.data.map((item, index) => item.color ?? PALETTE[index % PALETTE.length]));
 const chartEl = useTemplateRef('chartEl');
 const numberFormat = new Intl.NumberFormat();
 const ariaLabel = computed(
@@ -57,10 +60,10 @@ function render() {
 					radius: ['48%', '78%'],
 					avoidLabelOverlap: true,
 					label: { show: false },
-					data: props.data.map((item) => ({
+					data: props.data.map((item, index) => ({
 						name: item.name,
 						value: item.value,
-						itemStyle: { color: item.color ?? undefined },
+						itemStyle: { color: itemColors.value[index] },
 					})),
 				},
 			],
@@ -89,13 +92,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" module>
-.root { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 1fr); align-items: center; gap: 8px; }
+/* 凡例にはホスト名が並ぶので、円より凡例に幅を回す */
+.root { display: grid; grid-template-columns: minmax(96px, 2fr) minmax(0, 3fr); align-items: center; gap: 8px; }
 .chart { min-height: 220px; }
 .legend { min-width: 0; margin: 0; padding: 0; list-style: none; }
-.legend button { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; border: 0; border-radius: 8px; color: var(--MI_THEME-fg); background: transparent; text-align: start; font: inherit; }
+.legend button { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 8px; border: 0; border-radius: 8px; color: var(--MI_THEME-fg); background: transparent; text-align: start; font: inherit; }
 .legend button:not(:disabled) { cursor: pointer; }
 .legend button:not(:disabled):hover, .legend button:not(:disabled):focus-visible { background: var(--MI_THEME-buttonBg); }
 .legend button > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .swatch { width: 9px; height: 9px; border-radius: 50%; }
-@media (max-width: 500px) { .root { grid-template-columns: 1fr; } .chart { min-height: 180px; } }
 </style>

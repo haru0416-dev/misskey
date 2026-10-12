@@ -10,14 +10,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div v-show="!fetching && !fetchError" :class="$style.root">
 		<div v-if="topSubInstancesForPie && topPubInstancesForPie" class="pies">
 			<div class="pie deliver _panel">
-				<div class="title">Sub</div>
-				<XPie :data="topSubInstancesForPie" class="chart"/>
-				<div class="subTitle">Top 10</div>
+				<div class="header"><span>Sub</span><span class="subTitle">Top 10</span></div>
+				<XPie :data="topSubInstancesForPie"/>
 			</div>
 			<div class="pie inbox _panel">
-				<div class="title">Pub</div>
-				<XPie :data="topPubInstancesForPie" class="chart"/>
-				<div class="subTitle">Top 10</div>
+				<div class="header"><span>Pub</span><span class="subTitle">Top 10</span></div>
+				<XPie :data="topPubInstancesForPie"/>
 			</div>
 		</div>
 		<div v-if="!fetching" class="items">
@@ -130,25 +128,19 @@ onMounted(() => {
 			margin-bottom: 12px;
 
 			> .pie {
-				position: relative;
 				padding: 12px;
 
-				> .title {
-					position: absolute;
-					top: 20px;
-					left: 20px;
+				> .header {
+					display: flex;
+					justify-content: space-between;
+					align-items: baseline;
+					padding: 4px 8px 0;
 					font-size: 90%;
-				}
 
-				> .chart {
-					max-height: 150px;
-				}
-
-				> .subTitle {
-					position: absolute;
-					bottom: 20px;
-					right: 20px;
-					font-size: 85%;
+					> .subTitle {
+						font-size: 85%;
+						opacity: 0.7;
+					}
 				}
 			}
 		}

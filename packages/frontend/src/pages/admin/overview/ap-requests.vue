@@ -55,6 +55,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" module>
-.root { display: grid; gap: 16px; padding: 16px; }
+/* 列の幅はグラフの中身に合わせず、パネルの幅で決める */
+.root { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
 .root h3 { margin: 0 0 12px; font-size: 1em; }
 </style>
