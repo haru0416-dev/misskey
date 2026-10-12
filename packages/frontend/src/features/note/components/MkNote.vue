@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</template>
 		</I18n>
 		<div :class="$style.renoteInfo">
-			<button ref="renoteTime" :class="$style.renoteTime" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showRenoteMenu()">
+			<button ref="renoteTime" :class="$style.renoteTime" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showRenoteMenu()" @click="$event.detail === 0 && showRenoteMenu()">
 				<i class="ti ti-dots" :class="$style.renoteMenu"></i>
 				<MkTime :time="note.createdAt"/>
 			</button>
@@ -128,6 +128,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkA :to="`/notes/${appearNote.id}/reactions`" :class="[$style.reactionOmitted]">{{ i18n.ts.more }}</MkA>
 				</template>
 			</MkReactionsViewer>
+			<!-- ポップアップを開くボタンはマウス・タッチ・支援技術の押下では mousedown で開き、フォーカスを移さない。キーボードの Enter・Space だけは mousedown を伴わない detail 0 の click として届く -->
 			<footer :class="$style.footer">
 				<button :aria-label="i18n.ts.reply" :class="$style.footerButton" class="_button" @click="reply()">
 					<i class="ti ti-arrow-back-up"></i>
@@ -142,6 +143,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					@pointerenter="preloadNotePopupMenu"
 					@focus="preloadNotePopupMenu"
 					@mousedown.prevent="renote()"
+					@click="$event.detail === 0 && renote()"
 				>
 					<i class="ti ti-repeat"></i>
 					<p v-if="appearNote.renoteCount > 0" :class="$style.footerButtonCount">{{ number(appearNote.renoteCount) }}</p>
@@ -156,10 +158,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<i v-else class="ti ti-plus"></i>
 					<p v-if="(appearNote.reactionAcceptance === 'likeOnly' || prefer.showReactionsCount) && $appearNote.reactionCount > 0" :class="$style.footerButtonCount">{{ number($appearNote.reactionCount) }}</p>
 				</button>
-				<button v-if="prefer.showClipButtonInNoteFooter" ref="clipButton" :aria-label="i18n.ts.clip" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="clip()">
+				<button v-if="prefer.showClipButtonInNoteFooter" ref="clipButton" :aria-label="i18n.ts.clip" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="clip()" @click="$event.detail === 0 && clip()">
 					<i class="ti ti-paperclip"></i>
 				</button>
-				<button ref="menuButton" :aria-label="i18n.ts.menu" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showMenu()">
+				<button ref="menuButton" :aria-label="i18n.ts.menu" :class="$style.footerButton" class="_button" @pointerenter="preloadNotePopupMenu" @focus="preloadNotePopupMenu" @mousedown.prevent="showMenu()" @click="$event.detail === 0 && showMenu()">
 					<i class="ti ti-dots"></i>
 				</button>
 			</footer>

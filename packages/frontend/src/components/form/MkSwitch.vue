@@ -8,25 +8,29 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<input
 		ref="input"
 		type="checkbox"
+		role="switch"
+		:checked="isChecked"
 		:disabled="disabled"
+		:aria-labelledby="noBody ? undefined : labelId"
+		:aria-describedby="noBody || !slots['caption'] ? undefined : captionId"
 		:class="$style.input"
 		@click="toggle"
 	>
 	<XButton :class="$style.toggle" :checked="checked" :disabled="disabled" @toggle="toggle"/>
 	<span v-if="!noBody" :class="$style.body">
 		<span :class="$style.label">
-			<span @click="toggle">
+			<span :id="labelId" @click="toggle">
 				<slot name="label"></slot><slot></slot>
 			</span>
 			<button v-if="helpText" v-tooltip:dialog="helpText" type="button" class="_button _help" :class="$style.help" :aria-label="helpText"><i class="ti ti-help-circle"></i></button>
 		</span>
-		<p :class="$style.caption"><slot name="caption"></slot></p>
+		<p :id="captionId" :class="$style.caption"><slot name="caption"></slot></p>
 	</span>
 </div>
 </template>
 
 <script lang="ts" setup>
-import { toRefs } from 'vue';
+import { computed, nextTick, toRefs, unref, useId, useSlots, useTemplateRef } from 'vue';
 import type { Ref } from 'vue';
 import XButton from '@/components/form/MkSwitch.Button.vue';
 
@@ -42,13 +46,25 @@ const emit = defineEmits<{
 	(ev: 'change', v: boolean): void;
 }>();
 
+const slots = useSlots();
+const labelId = useId();
+const captionId = useId();
+const input = useTemplateRef('input');
+
 const checked = toRefs(props).modelValue;
+const isChecked = computed(() => Boolean(unref(props.modelValue)));
 const toggle = () => {
 	if (props.disabled) {
 		return;
 	}
 	emit('update:modelValue', !checked.value);
 	emit('change', !checked.value);
+	// チェックボックス自体の押下ではブラウザが先に checked を反転させる。呼び出し元が値を変えなかった場合も表示と揃える
+	void nextTick().then(() => {
+		if (input.value != null) {
+			input.value.checked = isChecked.value;
+		}
+	});
 };
 </script>
 

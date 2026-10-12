@@ -43,6 +43,10 @@ const KEY_ALIASES = {
 const MODIFIER_KEYS = new Set(['ctrl', 'alt', 'shift']);
 
 const IGNORE_ELEMENTS = ['input', 'textarea'];
+
+const ACTIVATION_KEYS = new Set(['Enter', ' ']);
+
+const ACTIVATABLE_SELECTOR = 'button, a[href], summary, [role="button"], [role="menuitem"], [role="link"]';
 //#endregion
 
 //#region store
@@ -60,6 +64,15 @@ export const makeHotkey = (keymap: Keymap, ignoreElements = IGNORE_ELEMENTS) => 
 			if (getHTMLElementOrNull(window.document.activeElement)?.isContentEditable) {
 				return;
 			}
+		}
+		// ショートカットを持つ要素の内側でボタンやリンクにフォーカスがあるとき、Enter と Space はその要素の押下に使う
+		if (
+			ACTIVATION_KEYS.has(ev.key) &&
+			ev.target !== ev.currentTarget &&
+			ev.target instanceof Element &&
+			ev.target.matches(ACTIVATABLE_SELECTOR)
+		) {
+			return;
 		}
 		for (const action of actions) {
 			if (matchPatterns(ev, action)) {

@@ -167,6 +167,12 @@ function onInputKeydown(evt: KeyboardEvent) {
 		evt.stopPropagation();
 		ok();
 	}
+	// モーダルの Esc は入力欄の中のキー入力を拾わないため、入力欄で受ける。変換中の Esc は MkInput が渡さない
+	if (evt.key === 'Escape') {
+		evt.preventDefault();
+		evt.stopPropagation();
+		cancel();
+	}
 }
 </script>
 

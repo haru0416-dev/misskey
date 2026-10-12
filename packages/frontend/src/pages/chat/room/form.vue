@@ -183,10 +183,12 @@ function onKeydown(ev: KeyboardEvent) {
 	if (ev.key === 'Enter') {
 		if (prefer['chat.sendOnEnter']) {
 			if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
+				ev.preventDefault();
 				send();
 			}
 		} else {
 			if (ev.ctrlKey || ev.metaKey) {
+				ev.preventDefault();
 				send();
 			}
 		}

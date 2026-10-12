@@ -7,6 +7,7 @@ import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vites
 import { cleanup, fireEvent, render } from '@testing-library/vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
+import MkSwitch from '@/components/form/MkSwitch.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import * as os from '@/os.js';
 
@@ -20,6 +21,7 @@ vi.mock('@/os.js', () => ({
 const global = {
 	directives: {
 		'adaptive-border': {},
+		tooltip: {},
 	},
 };
 
@@ -92,5 +94,36 @@ describe('form control accessibility', () => {
 		await fireEvent.keyDown(control, { key: 'Enter' });
 
 		expect(os.popupMenu).not.toHaveBeenCalled();
+	});
+
+	test('exposes MkSwitch as a named switch whose state follows modelValue', async () => {
+		const result = render(MkSwitch, {
+			props: { modelValue: true },
+			slots: {
+				label: 'Label',
+				caption: 'Caption',
+			},
+			global,
+		});
+		const control = result.getByRole('switch', { name: 'Label' }) as HTMLInputElement;
+		expect(document.getElementById(control.getAttribute('aria-describedby')!)?.textContent).toBe('Caption');
+		expect(control.checked).toBe(true);
+
+		await result.rerender({ modelValue: false });
+		expect(control.checked).toBe(false);
+	});
+
+	test('keeps the MkSwitch checkbox in sync when the parent does not apply the toggle', async () => {
+		const result = render(MkSwitch, {
+			props: { modelValue: false },
+			slots: { label: 'Label' },
+			global,
+		});
+		const control = result.getByRole('switch', { name: 'Label' }) as HTMLInputElement;
+
+		await fireEvent.click(control);
+
+		expect(result.emitted('update:modelValue')).toEqual([[true]]);
+		expect(control.checked).toBe(false);
 	});
 });
