@@ -202,6 +202,9 @@ onUnmounted(() => {
 	min-width: 100%;
 	max-width: 100%;
 	min-height: 130px;
+	// 投稿フォームと同じく内容に合わせて伸ばし、500px を超えたら中でスクロールさせる
+	max-height: 500px;
+	field-sizing: content;
 	margin: 0;
 	padding: 12px;
 	font: inherit;

@@ -155,7 +155,7 @@ async function pick(): Promise<void> {
 }
 
 .add {
-	color: var(--MI_THEME-fgTransparentWeak);
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
 }
 
 .icon {

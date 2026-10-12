@@ -178,6 +178,8 @@ export const isPreviewMode = ref(false);
 
 themeManager.on('requestUpdateThemeCache', (theme, props) => {
 	miLocalStorage.setItem('theme', JSON.stringify(props));
+	// 起動画面がテーマの色と一緒に当てる。無いと起動処理が終わるまでスクロールバーやフォーム部品がライトの配色で描かれる
+	miLocalStorage.setItem('colorScheme', theme.base === 'dark' ? 'dark' : 'light');
 	miLocalStorage.setItem('themeId', theme.id);
 	miLocalStorage.setItem('themeCachedVersion', version);
 });
@@ -221,6 +223,7 @@ export async function installTheme(code: string): Promise<void> {
 
 export function clearAppliedThemeCache() {
 	miLocalStorage.removeItem('theme');
+	miLocalStorage.removeItem('colorScheme');
 	miLocalStorage.removeItem('themeId');
 	miLocalStorage.removeItem('themeCachedVersion');
 }

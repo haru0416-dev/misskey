@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<i class="ti ti-user-edit"></i>
 	</div>
 	<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 32px;">
-		<!-- form の autocomplete は on / off しか取れない。new-password の指定は各 input 側にある -->
+		<!-- form の autocomplete は on / off しか取れない。username・email・new-password の指定は各 input 側にある -->
 		<form class="_gaps_m" autocomplete="off" @submit.prevent="onSubmit">
 			<MkInput v-if="instance.disableRegistration" v-model="invitationCode" type="text" :spellcheck="false" required data-cy-signup-invitation-code>
 				<template #label>{{ i18n.ts.invitationCode }}</template>
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<span v-else-if="usernameState === 'max-range'" style="color: var(--MI_THEME-error)"><i class="ti ti-alert-triangle ti-fw"></i> {{ i18n.ts.tooLong }}</span>
 				</template>
 			</MkInput>
-			<MkInput v-if="instance.emailRequiredForSignup" v-model="email" :debounce="true" type="email" :spellcheck="false" required data-cy-signup-email @update:modelValue="onChangeEmail">
+			<MkInput v-if="instance.emailRequiredForSignup" v-model="email" :debounce="true" type="email" :spellcheck="false" autocomplete="email" required data-cy-signup-email @update:modelValue="onChangeEmail">
 				<template #label>{{ i18n.ts.emailAddress }} <button v-tooltip:dialog="i18n.ts._signup.emailAddressInfo" type="button" class="_button _help" :aria-label="i18n.ts._signup.emailAddressInfo"><i class="ti ti-help-circle"></i></button></template>
 				<template #prefix><i class="ti ti-mail"></i></template>
 				<template #caption>

@@ -778,7 +778,7 @@ function loadConversation() {
 	margin: 8px 16px 0;
 	padding: 4px 8px;
 	border-radius: 999px;
-	color: var(--MI_THEME-fgTransparentWeak);
+	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
 	font-size: 0.85em;
 	cursor: pointer;
 

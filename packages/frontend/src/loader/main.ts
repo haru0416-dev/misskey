@@ -234,12 +234,11 @@ function applyDisplayPreferences(): void {
 					document.head.querySelector('meta[name="theme-color"]')?.setAttribute('content', String(v));
 				}
 			}
+			const colorScheme = localStorage.getItem('colorScheme');
+			if (colorScheme === 'light' || colorScheme === 'dark') {
+				document.documentElement.style.setProperty('color-scheme', colorScheme);
+			}
 		}
-	}
-
-	const colorScheme = localStorage.getItem('colorScheme');
-	if (colorScheme) {
-		document.documentElement.style.setProperty('color-scheme', colorScheme);
 	}
 
 	const fontSize = localStorage.getItem('fontSize');
