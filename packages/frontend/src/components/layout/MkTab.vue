@@ -57,8 +57,9 @@ function update(key: T['key']) {
 		cursor: default;
 	}
 
+	// accent は accentedBg の上で 4.4 なので、ページのタブと同じ navActive にする
 	&.active {
-		color: var(--MI_THEME-accent);
+		color: var(--MI_THEME-navActive);
 		background: var(--MI_THEME-accentedBg);
 	}
 

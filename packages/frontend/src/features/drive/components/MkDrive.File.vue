@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 		<p :class="$style.name">
 			<span>{{ file.name.includes('.') ? file.name.substring(0, file.name.lastIndexOf('.')) : file.name }}</span>
-			<span v-if="file.name.includes('.')" style="opacity: 0.5;">{{ file.name.substring(file.name.lastIndexOf('.')) }}</span>
+			<span v-if="file.name.includes('.')" :class="$style.ext">{{ file.name.substring(file.name.lastIndexOf('.')) }}</span>
 		</p>
 	</div>
 </div>
@@ -84,8 +84,7 @@ function onDragend() {
 <style lang="scss" module>
 .root {
 	position: relative;
-	padding: 8px 0 0 0;
-	min-height: 180px;
+	padding: 8px 0;
 	border-radius: 8px;
 	cursor: pointer;
 
@@ -225,5 +224,10 @@ function onDragend() {
 	word-break: break-all;
 	color: var(--MI_THEME-fg);
 	overflow: hidden;
+}
+
+/* 選択中はファイル名が fgOnAccent になるので、その色から薄める */
+.ext {
+	color: color-mix(in srgb, currentColor 85%, transparent);
 }
 </style>

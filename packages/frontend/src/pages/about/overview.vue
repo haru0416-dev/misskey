@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_gaps_m">
-	<div :class="$style.banner" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
+	<div :class="[$style.banner, { [$style.noImage]: !instance.bannerUrl }]" :style="{ backgroundImage: instance.bannerUrl ? `url(${ instance.bannerUrl })` : undefined }">
 		<div style="overflow: clip;">
 			<img :src="instance.iconUrl ?? '/client-assets/toneriko-icon.svg'" alt="" :class="$style.bannerIcon"/>
 			<div :class="$style.bannerName">
@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
-	<MkKeyValue>
+	<MkKeyValue v-if="instance.description">
 		<template #key>{{ i18n.ts.description }}</template>
 		<template #value><div v-html="instance.description"></div></template>
 	</MkKeyValue>
@@ -52,21 +52,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #key>{{ i18n.ts.administrator }}</template>
 					<template #value>
 						<template v-if="instance.maintainerName">{{ instance.maintainerName }}</template>
-						<span v-else style="opacity: 0.7;">({{ i18n.ts.none }})</span>
+						<span v-else :class="$style.none">({{ i18n.ts.none }})</span>
 					</template>
 				</MkKeyValue>
 				<MkKeyValue :copy="instance.maintainerEmail">
 					<template #key>{{ i18n.ts.contact }}</template>
 					<template #value>
 						<template v-if="instance.maintainerEmail">{{ instance.maintainerEmail }}</template>
-						<span v-else style="opacity: 0.7;">({{ i18n.ts.none }})</span>
+						<span v-else :class="$style.none">({{ i18n.ts.none }})</span>
 					</template>
 				</MkKeyValue>
 				<MkKeyValue>
 					<template #key>{{ i18n.ts.inquiry }}</template>
 					<template #value>
 						<MkLink v-if="instance.inquiryUrl" :url="instance.inquiryUrl" target="_blank">{{ instance.inquiryUrl }}</MkLink>
-						<span v-else style="opacity: 0.7;">({{ i18n.ts.none }})</span>
+						<span v-else :class="$style.none">({{ i18n.ts.none }})</span>
 					</template>
 				</MkKeyValue>
 			</FormSplit>
@@ -158,6 +158,10 @@ const initStats = () => misskeyApi('stats', {});
 	background-position: center center;
 }
 
+.none {
+	color: var(--MI-text-muted);
+}
+
 .bannerIcon {
 	display: block;
 	margin: 16px auto 0 auto;
@@ -171,5 +175,12 @@ const initStats = () => misskeyApi('stats', {});
 	color: #fff;
 	text-shadow: 0 0 8px #000;
 	background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+}
+
+/* 白い文字と下の暗いぼかしは画像の上で読ませるためのもので、画像が無いときはパネルの文字色で出す */
+.noImage .bannerName {
+	color: var(--MI_THEME-fg);
+	text-shadow: none;
+	background: none;
 }
 </style>

@@ -170,7 +170,7 @@ const entries = computed(() => {
 	min-width: 2em;
 	padding: 0 8px;
 	text-align: right;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	user-select: none;
 }
 

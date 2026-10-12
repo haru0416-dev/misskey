@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <span>
 	<span>@{{ user.username }}</span>
-	<span v-if="user.host || detail" style="opacity: 0.5;">@{{ user.host || host }}</span>
+	<span v-if="user.host || detail" :class="$style.host">@{{ user.host || host }}</span>
 </span>
 </template>
 
@@ -22,3 +22,10 @@ defineProps<{
 
 const host = toUnicode(hostRaw);
 </script>
+
+<style lang="scss" module>
+/* 名前の色から薄める。opacity 0.5 では Toneriko Dark で 2.7 になる */
+.host {
+	color: color-mix(in srgb, currentColor 85%, transparent);
+}
+</style>

@@ -261,7 +261,8 @@ function onMousedown(evt: MouseEvent): void {
 
 	&.danger {
 		font-weight: bold;
-		color: var(--MI_THEME-error);
+		// error (#ec4137) のままだとボタンの地に対し 3.2。文字色を 35% 混ぜて Toneriko の Light 4.8 / Dark 4.7 にする
+		color: color-mix(in srgb, var(--MI_THEME-error) 65%, var(--MI_THEME-fgHighlighted));
 
 		&.primary {
 			color: #fff;

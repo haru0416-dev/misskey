@@ -94,7 +94,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" module>
-.description { margin: 0 0 12px; font-size: 0.85em; color: color(from var(--MI_THEME-fg) srgb r g b / 0.75); }
+.description { margin: 0 0 12px; font-size: 0.85em; color: var(--MI-text-muted); }
 .scroller { overflow-x: auto; }
 .table { width: 100%; min-width: 320px; table-layout: fixed; border-spacing: 3px; font-variant-numeric: tabular-nums; }
 .table th { padding: 4px; color: var(--MI_THEME-fg); font-size: 0.75em; font-weight: 500; white-space: nowrap; text-align: center; }

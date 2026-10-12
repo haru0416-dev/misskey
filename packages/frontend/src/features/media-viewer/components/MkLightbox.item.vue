@@ -241,7 +241,8 @@ const infoShowing = ref(false);
 const hide = ref(true);
 const isVideoPlaying = computed(() => videoControl.value?.isPlaying ?? false);
 const isVideoActuallyPlaying = computed(() => videoControl.value?.isActuallyPlaying ?? false);
-const headerSize = 32;
+// ファイル名の帯の高さ。ボタンを --MI-control-md (44px) にしているのでそれに合わせ、画像はこの下から置く
+const headerSize = 44;
 const footerSize = props.content.type === 'video' && !prefer.useNativeUiForVideoAudioPlayer ? 80 : 0;
 const padding =
 	deviceKind === 'smartphone'
@@ -790,9 +791,9 @@ defineExpose({ onActive, onDeactive, closeThis });
 .header { top: 0; height: v-bind("headerSize + 'px'"); translate: 0 -100%; }
 .footer { bottom: 0; height: v-bind("footerSize + 'px'"); translate: 0 100%; }
 .infoShowing { opacity: 1; translate: 0; }
-.title { display: flex; align-items: center; width: max-content; max-width: calc(100% - 20px); margin: auto; box-sizing: border-box; border-radius: 0 0 10px 10px; font-size: 85%; }
-.titleButton { flex-shrink: 0; width: 36px; height: 36px; }
-.titleText { flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 6px 0; }
+.title { display: flex; align-items: center; width: max-content; max-width: calc(100% - 20px); margin: auto; box-sizing: border-box; border-radius: 0 0 12px 12px; font-size: 95%; }
+.titleButton { flex-shrink: 0; width: var(--MI-control-md); height: var(--MI-control-md); font-size: 1.15em; }
+.titleText { flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 8px 4px; }
 .mediaControl { width: 100%; height: 100%; max-width: min(1000px, calc(100% - 16px)); box-sizing: border-box; padding: 12px 20px; margin: auto; background: var(--MI_THEME-panel); border-radius: 12px 12px 0 0; }
 @container (max-width: 500px) { .mediaControl { padding: 8px 12px; } }
 </style>

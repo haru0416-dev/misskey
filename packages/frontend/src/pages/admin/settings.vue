@@ -575,7 +575,7 @@ definePage(() => ({
 
 .subCaption {
 	font-size: 0.85em;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 }
 
 // 共有 mixin が出力するクラスを $style の型へ載せるための列挙。空のルールは CSS に出力されない。

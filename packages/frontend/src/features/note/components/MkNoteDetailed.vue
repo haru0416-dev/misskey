@@ -118,7 +118,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<span dir="auto" :class="$style.bidiText"><Mfm :text="translation.text" :author="appearNote.user" :nyaize="'respect'" v-bind="appearNote.emojis === undefined ? {} : { emojiUrls: appearNote.emojis }" class="_selectable"/></span>
 						</div>
 					</div>
-					<div v-if="appearNote.files && appearNote.files.length > 0">
+					<div v-if="appearNote.files && appearNote.files.length > 0" :class="$style.files">
 						<MkMediaList ref="galleryEl" :mediaList="appearNote.files"/>
 					</div>
 					<MkPoll
@@ -760,13 +760,14 @@ function loadConversation() {
 	}
 }
 
+// 返信元は文字色だけを下げる。要素ごと透かすとハッシュタグやリンクの色が 4.5 を下回る
 .replyTo {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	padding-bottom: 0;
 }
 
 .replyToMore {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 }
 
 .parentNotes {
@@ -778,7 +779,7 @@ function loadConversation() {
 	margin: 8px 16px 0;
 	padding: 4px 8px;
 	border-radius: 999px;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	font-size: 0.85em;
 	cursor: pointer;
 
@@ -916,9 +917,12 @@ function loadConversation() {
 	overflow-wrap: break-word;
 }
 
+// アイコンは 1 文字分 (約 18px) なので、余白で押せる範囲を 24px 以上に広げ、負のマージンで行の配置は変えない
 .noteReplyTarget {
+	display: inline-block;
+	padding: 4px;
+	margin: -4px calc(0.5em - 4px) -4px -4px;
 	color: var(--MI_THEME-accent);
-	margin-right: 0.5em;
 }
 
 .rn {
@@ -934,6 +938,7 @@ function loadConversation() {
 	margin-top: 8px;
 }
 
+.files,
 .poll {
 	margin-top: var(--MI-step-3);
 }
@@ -950,20 +955,20 @@ function loadConversation() {
 }
 
 .channel {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	font-size: 80%;
 }
 
 .noteFooterInfo {
 	margin: 16px 0;
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	font-size: 0.9em;
 }
 
 .noteFooterButton {
 	margin: 0;
 	padding: 8px;
-	opacity: 0.7;
+	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%);
 
 	&:not(:last-child) {
 		margin-right: 28px;
@@ -977,7 +982,8 @@ function loadConversation() {
 .noteFooterButtonCount {
 	display: inline;
 	margin: 0 0 0 8px;
-	opacity: 0.7;
+	// ボタンの色 (文字色 70%) はアイコン向けで、数字には薄すぎる
+	color: var(--MI-text-muted);
 
 	&.reacted {
 		color: var(--MI_THEME-accent);

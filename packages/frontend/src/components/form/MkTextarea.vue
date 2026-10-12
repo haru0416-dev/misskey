@@ -29,7 +29,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		></textarea>
 	</div>
 	<div :id="captionId" :class="$style.caption"><slot name="caption"></slot></div>
-	<button v-if="mfmPreview" style="font-size: 0.85em;" class="_textButton" type="button" @click="preview = !preview">{{ i18n.ts.preview }}</button>
+	<button v-if="mfmPreview" :class="$style.previewButton" class="_textButton" type="button" @click="preview = !preview">{{ i18n.ts.preview }}</button>
 	<div v-if="mfmPreview" v-show="preview" v-panel :class="$style.mfmPreview">
 		<Mfm :text="v"/>
 	</div>
@@ -187,7 +187,13 @@ onUnmounted(() => {
 .caption {
 	font-size: 0.85em;
 	padding: 8px 0 0 0;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
+}
+
+/* _textButton は押せる範囲を上に 4px 広げるので、説明が空でも入力欄の下端に重ならないよう 6px 離す */
+.previewButton {
+	margin-top: 6px;
+	font-size: 0.85em;
 }
 
 :is(.label, .caption):empty {

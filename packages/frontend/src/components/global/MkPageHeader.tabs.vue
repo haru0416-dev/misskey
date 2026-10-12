@@ -212,14 +212,15 @@ onUnmounted(() => {
 	padding: 0 var(--MI-step-4);
 	height: 100%;
 	font-weight: 500;
-	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 72%, transparent);
+	// 85% と navActive は、どちらも Toneriko Light の地 #e5ecf1 に対し 4.5 以上 (5.0 と 5.8)。accent は 4.4 になる
+	color: color-mix(in srgb, var(--MI_THEME-pageHeaderFg) 85%, transparent);
 
 	&:hover {
 		color: var(--MI_THEME-pageHeaderFg);
 	}
 
 	&.active {
-		color: var(--MI_THEME-accent);
+		color: var(--MI_THEME-navActive);
 		font-weight: 650;
 	}
 
@@ -249,7 +250,7 @@ onUnmounted(() => {
 	position: absolute;
 	bottom: 0;
 	height: 2px;
-	background: var(--MI_THEME-accent);
+	background: var(--MI_THEME-navActive);
 	border-radius: 999px;
 	transition: none;
 	pointer-events: none;

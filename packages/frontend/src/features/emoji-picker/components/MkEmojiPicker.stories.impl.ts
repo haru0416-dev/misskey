@@ -36,13 +36,15 @@ export const Default = {
 	},
 	async play({ canvasElement }) {
 		const canvas = within(canvasElement);
-		const faceSection = canvas.getByText(/face/i);
+		await expect(canvas.queryByText(new RegExp(i18n.ts.recentUsed))).toEqual(null);
+		const faceSection = canvas.getByText(new RegExp(i18n.ts._emojiCategories.face));
 		await waitFor(() => userEvent.click(faceSection));
 		const grinning = canvasElement.querySelector('[data-emoji="😀"]');
 		await expect(grinning).toBeInTheDocument();
 		if (grinning == null) throw new Error(); // expect の後でも型が絞り込まれないための到達不能ガード。
 		await waitFor(() => userEvent.click(grinning));
-		const recentUsedSection = canvas.getByText(new RegExp(i18n.ts.recentUsed)).parentElement;
+		// 最近使用の欄は履歴が無いと出さないので、選んだ後に現れるのを待つ
+		const recentUsedSection = (await canvas.findByText(new RegExp(i18n.ts.recentUsed))).parentElement;
 		await expect(recentUsedSection).toBeInTheDocument();
 		if (recentUsedSection == null) throw new Error(); // expect の後でも型が絞り込まれないための到達不能ガード。
 		await expect(within(recentUsedSection).getByAltText('😀')).toBeInTheDocument();

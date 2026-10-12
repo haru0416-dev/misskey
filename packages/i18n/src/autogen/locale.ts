@@ -8630,6 +8630,44 @@ export interface Locale extends ILocale {
          */
         "saturday": string;
     };
+    "_emojiCategories": {
+        /**
+         * 顔
+         */
+        "face": string;
+        /**
+         * 人と体
+         */
+        "people": string;
+        /**
+         * 動物と自然
+         */
+        "animals_and_nature": string;
+        /**
+         * 食べ物と飲み物
+         */
+        "food_and_drink": string;
+        /**
+         * アクティビティ
+         */
+        "activity": string;
+        /**
+         * 旅行と場所
+         */
+        "travel_and_places": string;
+        /**
+         * 物
+         */
+        "objects": string;
+        /**
+         * 記号
+         */
+        "symbols": string;
+        /**
+         * 旗
+         */
+        "flags": string;
+    };
     "_widgets": {
         /**
          * プロフィール

@@ -287,7 +287,8 @@ onUnmounted(() => {
 }
 
 .subtitle {
-	color: color-mix(in oklab, var(--MI_THEME-pageHeaderFg) 68%, transparent);
+	// 85% で Toneriko Light の地 #e5ecf1 に対し 5.0
+	color: color-mix(in srgb, var(--MI_THEME-pageHeaderFg) 85%, transparent);
 	font-size: 0.8em;
 	font-weight: normal;
 	white-space: nowrap;

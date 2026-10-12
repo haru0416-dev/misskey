@@ -2251,6 +2251,17 @@ _weekday:
   friday: "金曜日"
   saturday: "土曜日"
 
+_emojiCategories:
+  face: "顔"
+  people: "人と体"
+  animals_and_nature: "動物と自然"
+  food_and_drink: "食べ物と飲み物"
+  activity: "アクティビティ"
+  travel_and_places: "旅行と場所"
+  objects: "物"
+  symbols: "記号"
+  flags: "旗"
+
 _widgets:
   profile: "プロフィール"
   instanceInfo: "サーバー情報"

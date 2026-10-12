@@ -257,7 +257,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 		}
 
 		> .title {
-			opacity: 0.7;
+			color: var(--MI-text-muted);
 			margin: 0 0 8px 0;
 			font-size: 0.9em;
 		}
@@ -313,14 +313,22 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 			margin-left: 0;
 			margin-right: 0;
 
+			/* 見出しの無いまとまりは 3 列に満たない行で終わるので、線で区切ってまとまりの終わりと分かるようにする */
 			& + .group {
-				padding-top: 0;
-				border-top: none;
+				margin-left: 16px;
+				margin-right: 16px;
+
+				> .title {
+					margin-left: 0;
+				}
+
+				> .items {
+					padding: 0;
+				}
 			}
 
 			> .title {
 				font-size: 1em;
-				opacity: 0.7;
 				margin: 0 0 8px 16px;
 			}
 

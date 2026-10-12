@@ -978,8 +978,9 @@ function emitUpdReaction(emoji: string, delta: number) {
 	padding-top: var(--MI-step-3);
 }
 
+// 返信元は文字色だけを下げる。要素ごと透かすとハッシュタグやリンクの色が 4.5 を下回る
 .replyTo {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	padding-bottom: 0;
 }
 
@@ -1168,9 +1169,12 @@ function emitUpdReaction(emoji: string, delta: number) {
 	overflow-wrap: break-word;
 }
 
+// アイコンは 1 文字分 (約 18px) なので、余白で押せる範囲を 24px 以上に広げ、負のマージンで行の配置は変えない
 .replyIcon {
+	display: inline-block;
+	padding: 4px;
+	margin: -4px calc(0.5em - 4px) -4px -4px;
 	color: var(--MI_THEME-accent);
-	margin-right: 0.5em;
 }
 
 .translation {
@@ -1242,6 +1246,8 @@ function emitUpdReaction(emoji: string, delta: number) {
 	display: inline;
 	margin: 0 0 0 var(--MI-step-2);
 	font-size: var(--MI-text-meta);
+	// ボタンの色 (文字色 70%) はアイコン向けで、数字には薄すぎる
+	color: var(--MI-text-muted);
 }
 
 // 狭い幅では余白を物差しの 1 段下 (step-5 → step-4、step-4 → step-3) にする。

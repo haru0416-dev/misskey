@@ -9,6 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="[$style.root, {
 		[$style.sensitiveHighlight]: highlightWhenSensitive && file.isSensitive,
 		[$style.large]: large,
+		[$style.bare]: fit === 'contain' && isThumbnailAvailable,
 	}]"
 >
 	<MkImgWithBlurhash
@@ -108,6 +109,11 @@ const isThumbnailAvailable = computed(() => {
 	background: var(--MI_THEME-panel);
 	border-radius: 8px;
 	overflow: clip;
+}
+
+/* 縦横比を保って収めた画像の周りに地の色の帯が出ないよう、画像があるときは地を塗らない。v-panel が style 属性で塗るので !important で上書きする */
+.bare {
+	background: none !important;
 }
 
 .sensitiveHighlight::after {

@@ -11,9 +11,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div :class="$style.menu">
 		<i v-if="isSyncEnabled" class="ti ti-cloud-cog" style="color: var(--MI_THEME-accent); opacity: 0.7;"></i>
 		<i v-if="isAccountOverrided" class="ti ti-user-cog" style="color: var(--MI_THEME-accent); opacity: 0.7;"></i>
-		<div :class="$style.buttons">
-			<button class="_button" style="color: var(--MI_THEME-fg)" @click="showMenu($event)"><i class="ti ti-dots"></i></button>
-		</div>
+		<button class="_button" :class="$style.menuButton" :aria-label="i18n.ts.menu" @click="showMenu($event)"><i class="ti ti-dots"></i></button>
 	</div>
 </div>
 </template>
@@ -24,6 +22,7 @@ import type { PREF_DEF } from '@/preferences/def.js';
 import * as os from '@/os.js';
 import { prefer } from '@/preferences.js';
 import { DI } from '@/di.js';
+import { i18n } from '@/i18n.js';
 
 const props = withDefaults(defineProps<{
 	k: keyof typeof PREF_DEF;
@@ -101,11 +100,6 @@ function showMenu(ev: PointerEvent, contextmenu?: boolean) {
 			pointer-events: none;
 		}
 
-		.menu {
-			.buttons {
-				opacity: 0.7;
-			}
-		}
 	}
 
 	.body {
@@ -121,15 +115,21 @@ function showMenu(ev: PointerEvent, contextmenu?: boolean) {
 		padding-left: 8px;
 		border-left: solid 1px var(--MI_THEME-divider);
 
-		&:hover {
-			.buttons {
-				opacity: 1;
-			}
-		}
+	}
+}
 
-		.buttons {
-			opacity: 0.3;
-		}
+/* 押せる範囲を 32px 四方にする。アイコンは文字色 70% で、Toneriko Light のパネルに対し 3.7 (アイコンに要る 3 以上) */
+.menuButton {
+	display: grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	margin: -8px 0;
+	border-radius: var(--MI-radius-md);
+	color: color-mix(in srgb, var(--MI_THEME-panel), var(--MI_THEME-fg) 70%);
+
+	&:hover {
+		color: var(--MI_THEME-fg);
 	}
 }
 </style>

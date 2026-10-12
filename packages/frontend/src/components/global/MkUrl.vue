@@ -102,8 +102,12 @@ const target = self ? null : '_blank';
 	font-weight: bold;
 }
 
+/*
+ * 補足部分はリンク色を透かさず文字色へ寄せる。Toneriko Light のリンク色はパネルに対し 4.8 で、透かすと 4.5 を割る。
+ * 文字色は Light で暗く Dark で明るいので、寄せるほど地との比が上がる
+ */
 .schema {
-	color: color(from currentcolor srgb r g b / 0.5);
+	color: color-mix(in srgb, currentcolor 50%, var(--MI_THEME-fg));
 }
 
 .hostname {
@@ -111,11 +115,11 @@ const target = self ? null : '_blank';
 }
 
 .pathname {
-	color: color(from currentcolor srgb r g b / 0.8);
+	color: color-mix(in srgb, currentcolor 80%, var(--MI_THEME-fg));
 }
 
 .query {
-	color: color(from currentcolor srgb r g b / 0.5);
+	color: color-mix(in srgb, currentcolor 50%, var(--MI_THEME-fg));
 }
 
 .hash {

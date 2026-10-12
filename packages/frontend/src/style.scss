@@ -325,7 +325,15 @@ rt {
 
 ._textButton {
 	@extend ._button;
+	position: relative;
 	color: var(--MI_THEME-accent);
+
+	/* 文字だけのボタンは高さが 1 行分 (本文 14px で約 19px) なので、見た目と行送りを変えずに押せる範囲を上下 4px ずつ広げて 24px 以上にする */
+	&::before {
+		content: "";
+		position: absolute;
+		inset: -4px -2px;
+	}
 
 	&:focus-visible {
 		outline-offset: 2px;

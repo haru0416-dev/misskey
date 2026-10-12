@@ -693,7 +693,7 @@ onDeactivated(disposeBannerParallaxResizeObserver);
 
 						> span {
 							font-size: 70%;
-							opacity: 0.7;
+							color: var(--MI-text-muted);
 						}
 					}
 				}

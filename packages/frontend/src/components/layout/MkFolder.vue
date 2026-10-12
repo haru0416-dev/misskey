@@ -298,7 +298,7 @@ watch(
 }
 
 .headerLower {
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	font-size: .85em;
 	padding-left: 4px;
 }
@@ -332,13 +332,13 @@ watch(
 }
 
 .headerTextSub {
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	font-size: .85em;
 }
 
 .headerRight {
 	margin-left: auto;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	white-space: nowrap;
 }
 

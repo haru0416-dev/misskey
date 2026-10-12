@@ -181,7 +181,7 @@ function showMenu(ev: PointerEvent) {
 }
 
 .statsItemLabel {
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 	font-size: 0.9em;
 }
 

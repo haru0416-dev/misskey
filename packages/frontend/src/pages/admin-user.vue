@@ -671,7 +671,7 @@ definePage(() => ({
 .roleItemSub {
 	padding: 6px 12px;
 	font-size: 85%;
-	color: color(from var(--MI_THEME-fg) srgb r g b / 0.75);
+	color: var(--MI-text-muted);
 }
 
 .roleUnassign {

@@ -54,6 +54,11 @@
 	--MI-surface-subtle: color-mix(in oklab, var(--MI_THEME-panel) 36%, var(--MI_THEME-bg));
 	--MI-surface-nav: color-mix(in oklab, var(--MI_THEME-navBg) 82%, var(--MI_THEME-bg));
 	--MI-border-muted: color-mix(in oklab, var(--MI_THEME-divider) 82%, transparent);
+	/*
+	 * 補足の文字。不透明度 85% で、Toneriko Light (文字 #434d54) は地 #e5ecf1 に対し 5.0、パネル #f1f7fb に対し 5.4、
+	 * Toneriko Dark (文字 #c1cbd1) は 7.0 以上になり、本文用の 4.5 を満たす。opacity 0.7 は Light で 3.5 前後になる。
+	 */
+	--MI-text-muted: color-mix(in srgb, var(--MI_THEME-fg) 85%, transparent);
 	--MI-shadow-sm: 0 2px 8px color-mix(in oklab, var(--MI_THEME-shadow) 62%, transparent);
 	--MI-shadow-md: 0 8px 16px color-mix(in oklab, var(--MI_THEME-shadow) 72%, transparent);
 

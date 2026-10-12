@@ -14,7 +14,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@afterLeave="onAfterLeave"
 >
 	<div v-show="showing" ref="rootEl" v-hotkey="keymap" :class="$style.root" :style="{ zIndex }" role="dialog" aria-modal="true" :aria-label="String(i18n.ts.image)" tabindex="-1" @keydown.capture="onKeydownCapture">
-		<div :class="$style.bg" class="_modalBg"></div>
+		<div :class="$style.bg"></div>
 		<div :class="$style.main">
 			<div
 				:class="[$style.items, { [$style.itemsTransition]: enableSlideTransition }]"
@@ -243,6 +243,8 @@ defineExpose({ close });
 .transition_root_enterFrom, .transition_root_leaveTo { pointer-events: none; > .bg { opacity: 0; } }
 .root { position: fixed; inset: 0; }
 .main, .bg { position: absolute; inset: 0; }
+/* 画像の色を地の色に引っ張られず見られるよう、テーマによらず暗い幕にする。modalBg (Light は黒 30%) とぼかしでは後ろのページが透ける */
+.bg { background: rgba(0, 0, 0, 0.88); }
 .items { position: absolute; display: flex; width: calc(v-bind("screenWidth + 'px'") * v-bind("props.contents.length")); height: 100dvh; overflow: clip; contain: strict; }
 .itemsTransition { pointer-events: none; transition: translate v-bind("slideAnimDuration + 'ms'") cubic-bezier(0.45, 0, 0.55, 1); }
 .item { width: 100dvw; height: 100dvh; overflow: clip; contain: strict; flex-shrink: 0; }

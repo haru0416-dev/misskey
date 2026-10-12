@@ -68,7 +68,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</section>
 
-			<section>
+			<section v-if="recentlyUsedEmojisDef.length > 0">
 				<header class="_acrylic"><i class="ti ti-clock ti-fw"></i> {{ i18n.ts.recentUsed }}</header>
 				<div class="body">
 					<button
@@ -86,7 +86,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 			</section>
 		</div>
-		<div v-once class="group">
+		<div v-if="customEmojis.length > 0" v-once class="group">
 			<header class="_acrylic">{{ i18n.ts.customEmojis }}</header>
 			<XSection
 				v-for="child in customEmojiFolderRoot.children"
@@ -103,7 +103,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<div v-once class="group">
 			<header class="_acrylic">{{ i18n.ts.emoji }}</header>
-			<XSection v-for="category in categories" :key="category" :emojis="emojiCharByCategory.get(category) ?? []" :hasChildSection="false" @chosen="chosen">{{ category }}</XSection>
+			<XSection v-for="category in categories" :key="category" :emojis="emojiCharByCategory.get(category) ?? []" :hasChildSection="false" @chosen="chosen">{{ i18n.ts._emojiCategories[category] }}</XSection>
 		</div>
 	</div>
 	<div class="tabs">

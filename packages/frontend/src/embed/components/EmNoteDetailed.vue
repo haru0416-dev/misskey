@@ -321,9 +321,12 @@ const collapsed = ref(appearNote.value.cw == null && isLong);
 	overflow-wrap: break-word;
 }
 
+// アイコンは 1 文字分 (約 18px) なので、余白で押せる範囲を 24px 以上に広げ、負のマージンで行の配置は変えない
 .noteReplyTarget {
+	display: inline-block;
+	padding: 4px;
+	margin: -4px calc(0.5em - 4px) -4px -4px;
 	color: var(--MI_THEME-accent);
-	margin-right: 0.5em;
 }
 
 .rn {
