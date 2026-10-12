@@ -47,7 +47,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 <div v-else>
 	<component :is="self ? 'MkA' : 'a'" :class="[$style.link, { [$style.compact]: compact }]" :[attr]="maybeRelativeUrl" rel="nofollow noopener" :target="target" :title="url">
-		<div v-if="thumbnail && !sensitive" :class="$style.thumbnail" :style="prefer.dataSaver.urlPreviewThumbnail ? '' : { backgroundImage: `url('${thumbnail}')` }">
+		<!-- og:image が指す画像を相手のサイトが置いていないことがあるため、読み込めなければ枠ごと外して本文を全幅にする -->
+		<div v-if="thumbnail && !sensitive && !thumbnailFailed" :class="$style.thumbnail">
+			<img v-if="!prefer.dataSaver.urlPreviewThumbnail" :class="$style.thumbnailImg" :src="thumbnail" alt="" decoding="async" @error="thumbnailFailed = true"/>
 		</div>
 		<article :class="$style.body">
 			<header :class="$style.header">
@@ -127,6 +129,7 @@ const thumbnail = computed(() => summalyResult.value?.thumbnail ?? null);
 const icon = computed(() => summalyResult.value?.icon ?? null);
 const sitename = computed(() => summalyResult.value?.sitename ?? null);
 const sensitive = computed(() => summalyResult.value?.sensitive ?? false);
+const thumbnailFailed = ref(false);
 const player = computed(() => summalyResult.value?.player ?? { url: null, width: null, height: null });
 const playerEnabled = ref(false);
 const tweetId = ref<string | null>(null);
@@ -294,17 +297,19 @@ onUnmounted(() => {
 	position: absolute;
 	width: 100px;
 	height: 100%;
-	background-position: center;
-	background-size: cover;
 	background-color: var(--MI_THEME-bg);
-	display: flex;
-	justify-content: center;
-	align-items: center;
 
 	& + .body {
 		left: 100px;
 		width: calc(100% - 100px);
 	}
+}
+
+.thumbnailImg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 .body {

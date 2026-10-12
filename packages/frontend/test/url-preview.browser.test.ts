@@ -96,6 +96,20 @@ describe('MkUrlPreview', () => {
 		);
 	});
 
+	test('removes the thumbnail box when the thumbnail fails to load', async () => {
+		const mkUrlPreview = await renderPreviewBy({
+			url: 'https://example.local',
+			title: 'Mocked title',
+			thumbnail: 'https://example.local/missing.png',
+		});
+		const thumbnail = mkUrlPreview.container.querySelector('article')?.previousElementSibling;
+		const img = thumbnail?.querySelector('img');
+		assert.exists(img, 'thumbnail image should exist');
+		img?.dispatchEvent(new Event('error'));
+		await Promise.resolve();
+		assert.isNull(mkUrlPreview.container.querySelector('article')?.previousElementSibling ?? null);
+	});
+
 	test('A Summaly proxy response without allow falls back to the default', async () => {
 		const iframe = await renderAndOpenPreview({
 			url: 'https://example.local',
