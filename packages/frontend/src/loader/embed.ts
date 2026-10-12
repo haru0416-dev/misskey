@@ -50,7 +50,7 @@ const renderError = async (code: string): Promise<void> => {
 
 		body {
 			position: relative;
-			color: #c9ccda;
+			color: #c1cbd1;
 			font-family: Hiragino Maru Gothic Pro, BIZ UDGothic, Roboto, HelveticaNeue, Arial, sans-serif;
 			line-height: 1.35;
 			display: flex;
@@ -74,7 +74,7 @@ const renderError = async (code: string): Promise<void> => {
 			left: 0;
 			width: 100%;
 			height: 100%;
-			background: #191a21;
+			background: #171f25;
 			border-radius: var(--radius, 12px);
 			z-index: -1;
 		}
@@ -120,15 +120,15 @@ const renderError = async (code: string): Promise<void> => {
 			font-family: Hiragino Maru Gothic Pro, BIZ UDGothic, Roboto, HelveticaNeue, Arial, sans-serif;
 			line-height: 1.35;
 			border-radius: 99rem;
-			background-color: #8185f2;
-			color: #fff;
+			background-color: #6fabd2;
+			color: #0f171d;
 			border: none;
 			cursor: pointer;
 			-webkit-tap-highlight-color: transparent;
 		}
 
 		button:hover {
-			background-color: #9a9ef5;
+			background-color: #80bde4;
 		}`);
 	errorStyleInstalled = true;
 };

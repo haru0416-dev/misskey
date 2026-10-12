@@ -510,7 +510,7 @@ definePage(() => ({
 			}
 
 			&.checked {
-				background-color: #8185f2;
+				background-color: #6fabd2;
 
 				> .before {
 					color: var(--MI_THEME-fg);

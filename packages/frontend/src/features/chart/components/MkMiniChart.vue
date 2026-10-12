@@ -7,8 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <svg :viewBox="`0 0 ${ viewBoxX } ${ viewBoxY }`" style="overflow:visible">
 	<defs>
 		<linearGradient :id="gradientId" x1="0" x2="0" y1="1" y2="0">
-			<stop offset="0%" :stop-color="color" stop-opacity="0"></stop>
-			<stop offset="100%" :stop-color="color" stop-opacity="0.65"></stop>
+			<stop offset="0%" style="stop-color: var(--MI_THEME-accent); stop-opacity: 0;"></stop>
+			<stop offset="100%" style="stop-color: var(--MI_THEME-accent); stop-opacity: 0.65;"></stop>
 		</linearGradient>
 	</defs>
 	<template v-if="polylinePoints !== ''">
@@ -19,14 +19,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<polyline
 			:points="polylinePoints"
 			fill="none"
-			:stroke="color"
+			style="stroke: var(--MI_THEME-accent);"
 			stroke-width="2"
 		/>
 		<circle
 			:cx="headX ?? undefined"
 			:cy="headY ?? undefined"
 			r="3"
-			:fill="color"
+			style="fill: var(--MI_THEME-accent);"
 		/>
 	</template>
 </svg>
@@ -35,8 +35,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { watch, ref } from 'vue';
 import { genId } from '@/utility/id.js';
-import { themeManager } from '@/theme.js';
-import tinycolor from 'tinycolor2';
 
 const props = defineProps<{
 	src: number[];
@@ -49,8 +47,6 @@ const polylinePoints = ref('');
 const polygonPoints = ref('');
 const headX = ref<number | null>(null);
 const headY = ref<number | null>(null);
-const accent = tinycolor(themeManager.currentCompiledTheme!['accent']);
-const color = accent.toRgbString();
 
 function draw(): void {
 	const stats = props.src.slice().reverse();

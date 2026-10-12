@@ -3,8 +3,8 @@
 	"name": "Toneriko",
 	"start_url": "/",
 	"display": "standalone",
-	"background_color": "#191a21",
-	"theme_color": "#5c62d8",
+	"background_color": "#171f25",
+	"theme_color": "#26739f",
 	"icons": [
 		{
 			"src": "/client-assets/toneriko-icon-192.png",

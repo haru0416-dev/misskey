@@ -40,7 +40,7 @@ function publishQueueReadiness() {
 const logger = createLogger('core', 'cyan');
 const bootLogger = logger.createSubLogger('boot', 'magenta');
 
-const themeColor = (text: string) => colorize('#8185f2', text);
+const themeColor = (text: string) => colorize('#6fabd2', text);
 
 function greet(props: { version: string }) {
 	if (!envOption.quiet) {

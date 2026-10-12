@@ -60,7 +60,7 @@ export function renderEmailHtml(params: {
 	const styledHtml = new HTMLRewriter()
 		.on('a', {
 			element(element) {
-				element.setAttribute('style', `text-decoration: none; color: #5c62d8; ${element.getAttribute('style') ?? ''}`);
+				element.setAttribute('style', `text-decoration: none; color: #26739f; ${element.getAttribute('style') ?? ''}`);
 			},
 		})
 		.transform(safeHtml);
@@ -86,7 +86,7 @@ export function renderEmailHtml(params: {
 				<div>${styledHtml}</div>
 			</article>
 			<footer style="padding: 32px; border-top: solid 1px #eee;">
-				<a href="${escapeHtml(params.emailSettingUrl)}" style="text-decoration: none; color: #5c62d8;">${'Email setting'}</a>
+				<a href="${escapeHtml(params.emailSettingUrl)}" style="text-decoration: none; color: #26739f;">${'Email setting'}</a>
 			</footer>
 		</main>
 		<nav style="box-sizing: border-box; max-width: 500px; margin: 16px auto 0 auto; padding: 0 32px;">

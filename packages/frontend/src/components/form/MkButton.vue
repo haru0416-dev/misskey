@@ -192,6 +192,10 @@ function onMousedown(evt: MouseEvent): void {
 	}
 
 	&.primary {
+		/* 標準テーマはリンク・ハッシュタグ・メンションをアクセントと同じ色にしているため、地がアクセントのボタン内では文字色に揃える */
+		--MI_THEME-link: var(--MI_THEME-fgOnAccent);
+		--MI_THEME-hashtag: var(--MI_THEME-fgOnAccent);
+		--MI_THEME-mention: var(--MI_THEME-fgOnAccent);
 		font-weight: bold;
 		color: var(--MI_THEME-fgOnAccent);
 		background: var(--MI_THEME-accent);

@@ -10,7 +10,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="z-index:1;position:relative" viewBox="0 0 854 300" aria-hidden="true" focusable="false">
 				<defs>
 					<linearGradient id="linear" x1="0%" y1="0%" x2="100%" y2="0%">
-						<stop offset="0%" stop-color="#8185f2"/><stop offset="100%" stop-color="#5c62d8"/>
+						<stop offset="0%" stop-color="#6fabd2"/><stop offset="100%" stop-color="#26739f"/>
 					</linearGradient>
 				</defs>
 

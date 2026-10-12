@@ -9,7 +9,7 @@
 	kind: 'light',
 
 	props: {
-		accent: '#5c62d8',
+		accent: '#26739f',
 		accentedBg: ':alpha<0.15<@accent',
 		love: '#dd2e44',
 		focus: ':alpha<0.3<@accent',

@@ -12,8 +12,8 @@ export function CommonHeadMeta(props: Pick<CommonData, 'themeColor' | 'instanceN
 			<meta charset="UTF-8" />
 			<meta name="application-name" content="Toneriko" />
 			<meta name="referer" content="origin" />
-			<meta name="theme-color" content={props.themeColor ?? '#5c62d8'} />
-			<meta name="theme-color-orig" content={props.themeColor ?? '#5c62d8'} />
+			<meta name="theme-color" content={props.themeColor ?? '#26739f'} />
+			<meta name="theme-color-orig" content={props.themeColor ?? '#26739f'} />
 			<meta property="og:site_name" content={props.instanceName || 'Toneriko'} />
 			<meta property="instance_url" content={props.instanceUrl} />
 			<meta

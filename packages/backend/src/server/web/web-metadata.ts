@@ -18,8 +18,8 @@ function createManifest(deps: WebMetadataDependencies): Record<string, unknown> 
 		name: deps.meta.name || deps.config.runtime.host,
 		start_url: '/',
 		display: 'standalone',
-		background_color: '#191a21',
-		theme_color: deps.meta.themeColor || '#5c62d8',
+		background_color: '#171f25',
+		theme_color: deps.meta.themeColor || '#26739f',
 		icons: [
 			{
 				src: deps.meta.app192IconUrl || '/client-assets/toneriko-icon-192.png',

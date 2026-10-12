@@ -58,7 +58,7 @@ const renderError = async (code: string, details?: unknown): Promise<void> => {
 			<p>${t('solution2')}</p>
 			<p>${t('solution3')}</p>
 			<p>${t('solution4')}</p>
-			<details style="color: #8185f2;">
+			<details style="color: #6fabd2;">
 				<summary>${t('otherOption')}</summary>
 				<a href="${escapeHtml(safeModeUrl.href)}">
 					<button class="button-small">
@@ -119,8 +119,8 @@ const renderError = async (code: string, details?: unknown): Promise<void> => {
 
 		body,
 		html {
-			background-color: #191a21;
-			color: #c9ccda;
+			background-color: #171f25;
+			color: #c1cbd1;
 			justify-content: center;
 			margin: auto;
 			padding: 10px;
@@ -136,38 +136,38 @@ const renderError = async (code: string, details?: unknown): Promise<void> => {
 		}
 
 		.button-big {
-			background: linear-gradient(90deg, #8185f2, #5c62d8);
+			background: #6fabd2;
 			line-height: 50px;
 		}
 
 		.button-big:hover {
-			background: #9a9ef5;
+			background: #80bde4;
 		}
 
 		.button-small {
-			background: #2e303b;
+			background: #283036;
 			line-height: 40px;
 		}
 
 		.button-small:hover {
-			background: #383a47;
+			background: #2d373e;
 		}
 
 		.button-label-big {
-			color: #fff;
+			color: #0f171d;
 			font-weight: bold;
 			font-size: 1.2em;
 			padding: 12px;
 		}
 
 		.button-label-small {
-			color: #a9adf5;
+			color: #a0cae7;
 			font-size: 16px;
 			padding: 12px;
 		}
 
 		a {
-			color: #8185f2;
+			color: #6fabd2;
 			text-decoration: none;
 		}
 
