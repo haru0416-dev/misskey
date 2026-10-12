@@ -208,8 +208,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import JSON5 from 'json5';
-import defaultLightTheme from '@/shared/themes/l-light.json5';
-import defaultDarkTheme from '@/shared/themes/d-green-lime.json5';
+import { defaultLightTheme, defaultDarkTheme } from '@/shared/themes/default.js';
 import { isSafeMode } from '@/shared/utility/config.js';
 import { getBuiltinThemes, parseThemeJsonOrNull } from '@/shared/utility/theme.js';
 import type { Theme } from '@/shared/utility/theme.js';

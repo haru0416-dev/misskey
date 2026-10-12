@@ -14,8 +14,7 @@ if (import.meta.env.DEV) {
 
 import '@/embed/style.scss';
 import { createApp, defineAsyncComponent } from 'vue';
-import defaultLightTheme from '@/shared/themes/l-light.json5';
-import defaultDarkTheme from '@/shared/themes/d-dark.json5';
+import { defaultLightTheme, defaultDarkTheme } from '@/shared/themes/default.js';
 import { MediaProxy } from '@/shared/utility/media-proxy.js';
 import { storeBootloaderErrors } from '@/shared/utility/store-boot-errors.js';
 import { parseThemeJsonOrNull } from '@/shared/utility/theme.js';
