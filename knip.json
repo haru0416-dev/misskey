@@ -1,5 +1,6 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignoreBinaries": ["check"],
 	"ignore": [
 		"packages/backend/migration/_legacy/**",
 		"packages/backend/assets/**",
@@ -26,8 +27,6 @@
 		},
 		"packages/frontend": {
 			"entry": [
-				"src/boot/entry.ts",
-				"src/embed/boot.ts",
 				"src/loader/main.ts",
 				"src/loader/embed.ts",
 				"src/workers/*.ts",
