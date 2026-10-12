@@ -8,8 +8,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #icon><i class="ti ti-hash"></i></template>
 	<template #header>{{ i18n.ts._widgets.trends }}</template>
 
-	<div class="wbrkwala">
+	<div class="wbrkwala" :class="{ empty: !fetching && stats.length === 0 }">
 		<MkLoading v-if="fetching"/>
+		<p v-else-if="stats.length === 0" class="nothing">{{ i18n.ts.nothing }}</p>
 		<TransitionGroup v-else tag="div" :name="prefer.animation ? 'chart' : ''" class="tags">
 			<div v-for="stat in stats" :key="stat.tag">
 				<div class="tag">
@@ -83,6 +84,18 @@ defineExpose<WidgetComponentExpose>({
 .wbrkwala {
 	height: (62px + 1px) + (62px + 1px) + (62px + 1px) + (62px + 1px) + 62px;
 	overflow: hidden;
+
+	/* 5 行分の高さは更新で行が入れ替わっても揺れないためのもので、空のときは 1 行で足りる */
+	&.empty {
+		height: auto;
+	}
+
+	> .nothing {
+		margin: 0;
+		padding: 16px;
+		text-align: center;
+		color: var(--MI_THEME-fg);
+	}
 
 	> .tags {
 		.chart-move {

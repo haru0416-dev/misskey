@@ -130,6 +130,16 @@ function toggleSeries(index: number) {
 }
 
 function render() {
+	// 凡例の色はデータが無くグラフを隠しているときも出すので、描画できるかを見る前に読む
+	palette.value = [
+		'--MI_THEME-accent',
+		'--MI_THEME-success',
+		'--MI_THEME-warn',
+		'--MI_THEME-error',
+		'--MI_THEME-link',
+		'--MI_THEME-renote',
+		'--MI_THEME-hashtag',
+	].map(themeValue);
 	if (chartEl.value == null) {
 		return;
 	}
@@ -140,15 +150,6 @@ function render() {
 	const fg = themeValue('--MI_THEME-fg');
 	const divider = themeValue('--MI_THEME-divider');
 	const panel = themeValue('--MI_THEME-panel');
-	palette.value = [
-		'--MI_THEME-accent',
-		'--MI_THEME-success',
-		'--MI_THEME-warn',
-		'--MI_THEME-error',
-		'--MI_THEME-link',
-		'--MI_THEME-renote',
-		'--MI_THEME-hashtag',
-	].map(themeValue);
 	const option: EChartsCoreOption = {
 		animation: false,
 		backgroundColor: 'transparent',
