@@ -20,6 +20,7 @@ export async function handleApiRetention(
 ): Promise<
 	{
 		createdAt: string;
+		dateKey: string;
 		users: number;
 		data: Record<string, number>;
 	}[]
@@ -29,6 +30,7 @@ export async function handleApiRetention(
 
 	return records.map((record) => ({
 		createdAt: record.createdAt.toISOString(),
+		dateKey: record.dateKey,
 		users: record.usersCount,
 		data: record.data,
 	}));

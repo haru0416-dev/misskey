@@ -1267,10 +1267,6 @@ export interface Locale extends ILocale {
     "emptyFolder": string;
     "_chart": {
         /**
-         * ピーク
-         */
-        "peak": string;
-        /**
          * 表示する系列
          */
         "series": string;
@@ -1331,9 +1327,21 @@ export interface Locale extends ILocale {
          */
         "retention": string;
         /**
-         * 開始日
+         * その日に登録したユーザーのうち、n日後にアクティブだった人の割合
          */
-        "startDate": string;
+        "retentionDescription": string;
+        /**
+         * 登録日
+         */
+        "signupDate": string;
+        /**
+         * 登録数
+         */
+        "signups": string;
+        /**
+         * {n}日後
+         */
+        "daysAfter": ParameterizedString<"n">;
     };
     /**
      * ここにファイルをドロップしてアップロード

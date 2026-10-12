@@ -1375,6 +1375,9 @@ export const endpointMetas = {
 							type: 'string',
 							format: 'date-time',
 						},
+						dateKey: {
+							type: 'string',
+						},
 						users: {
 							type: 'number',
 						},
@@ -1389,7 +1392,7 @@ export const endpointMetas = {
 							},
 						},
 					},
-					required: ['createdAt', 'users', 'data'],
+					required: ['createdAt', 'dateKey', 'users', 'data'],
 				},
 			},
 

@@ -488,9 +488,15 @@ describe('Endpoints', () => {
 			expect(res.status).toBe(200);
 			expect(res.headers.get('cache-control')).toBe('public, max-age=3600');
 
-			const body = (await res.json()) as { createdAt?: unknown; users?: unknown; data?: Record<string, unknown> }[];
+			const body = (await res.json()) as {
+				createdAt?: unknown;
+				dateKey?: unknown;
+				users?: unknown;
+				data?: Record<string, unknown>;
+			}[];
 			const record = body.find((item) => item.createdAt === latest.createdAt.toISOString());
 			assert.ok(record);
+			expect(record.dateKey).toBe(latest.dateKey);
 			expect(record.users).toBe(latest.usersCount);
 			expect(record.data).toStrictEqual(latest.data);
 		});

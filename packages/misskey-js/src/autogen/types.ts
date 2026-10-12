@@ -34000,6 +34000,7 @@ export interface operations {
                     'application/json': {
                         /** Format: date-time */
                         createdAt: string;
+                        dateKey: string;
                         users: number;
                         data: {
                             [key: string]: number;

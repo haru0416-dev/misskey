@@ -6,7 +6,6 @@
 import { i18n } from '@/i18n.js';
 
 type ChartLocaleKey =
-	| 'peak'
 	| 'series'
 	| 'noData'
 	| 'read'
@@ -22,10 +21,12 @@ type ChartLocaleKey =
 	| 'outgoingSucceeded'
 	| 'outgoingFailed'
 	| 'retention'
-	| 'startDate';
+	| 'retentionDescription'
+	| 'signupDate'
+	| 'signups'
+	| 'daysAfter';
 
 const fallback: Record<ChartLocaleKey, string> = {
-	peak: 'Peak',
 	series: 'Visible series',
 	noData: 'No data for this period',
 	read: 'Read',
@@ -41,7 +42,10 @@ const fallback: Record<ChartLocaleKey, string> = {
 	outgoingSucceeded: 'Outgoing: succeeded',
 	outgoingFailed: 'Outgoing: failed',
 	retention: 'Retention rate',
-	startDate: 'Start date',
+	retentionDescription: 'Share of users who signed up on each day and were active n days later',
+	signupDate: 'Signed up',
+	signups: 'Users',
+	daysAfter: 'Day {n}',
 };
 
 export function chartText(key: ChartLocaleKey): string {
