@@ -14,5 +14,5 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<path d="M366 22V100M396 46L366 78M378 66L398 100"/>
 		<circle cx="449" cy="72" r="27"/>
 	</g>
-	<circle cx="342" cy="23" r="7.5" fill="#8185f2"/>
+	<circle cx="342" cy="23" r="7.5" fill="#6fabd2"/>
 </svg>
