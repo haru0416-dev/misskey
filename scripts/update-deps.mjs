@@ -22,6 +22,14 @@ const heldMajors = {
 			'TypeScript 7 は JS API を持たず、vue-tsc・i18n の型生成・misskey-js の generator が 6 系を要する (Vue 以外の型検査は bun check が内蔵する 7、d.ts 生成と連合テストのビルドは typescript-native の 7 で実行済み)',
 	},
 };
+// 互換範囲の中で壊れていると分かっている版を名指しで飛ばす。より新しい版が出ればそちらを選ぶ。
+const skippedVersions = {
+	'vue-tsc': {
+		versions: ['3.3.12'],
+		reason:
+			'3.3.12 はテンプレート内の束縛に TS2339 "Property \'value\' does not exist" を誤って出し、frontend の型検査が 15 件落ちる (vuejs/language-tools#6267)',
+	},
+};
 const FETCH_CONCURRENCY = 8;
 
 function parseVersion(version) {
@@ -68,6 +76,27 @@ export function pickUpdate(current, versions, now, minAgeMs) {
 		}
 	}
 	return { compatible: compatible?.join('.') ?? null, major: major?.join('.') ?? null };
+}
+
+/**
+ * 名指しで飛ばす版を除いて選び、除いたことで上げなかった版を `skipped` に返す。
+ * @param {string} current
+ * @param {{ version: string, time: number, deprecated: boolean }[]} versions
+ * @param {number} now
+ * @param {number} minAgeMs
+ * @param {{ versions: string[] } | undefined} skip
+ * @returns {{ compatible: string | null, major: string | null, skipped: string | null }}
+ */
+export function pickUpdateSkipping(current, versions, now, minAgeMs, skip) {
+	if (skip == null) return { ...pickUpdate(current, versions, now, minAgeMs), skipped: null };
+	const pick = pickUpdate(
+		current,
+		versions.filter((entry) => !skip.versions.includes(entry.version)),
+		now,
+		minAgeMs,
+	);
+	const unrestricted = pickUpdate(current, versions, now, minAgeMs).compatible;
+	return { ...pick, skipped: unrestricted !== pick.compatible ? unrestricted : null };
 }
 
 function readMinAgeSeconds() {
@@ -221,24 +250,29 @@ async function main() {
 	const failures = [];
 	const picks = await mapConcurrent(names, FETCH_CONCURRENCY, async (name) => {
 		try {
-			return pickUpdate(currentByName.get(name), await fetchVersions(name), now, minAgeSeconds * 1000);
+			const skip = Object.hasOwn(skippedVersions, name) ? skippedVersions[name] : undefined;
+			return pickUpdateSkipping(currentByName.get(name), await fetchVersions(name), now, minAgeSeconds * 1000, skip);
 		} catch (error) {
 			failures.push({ name, error: error instanceof Error ? error.message : String(error) });
-			return { compatible: null, major: null };
+			return { compatible: null, major: null, skipped: null };
 		}
 	});
 
 	const updated = [];
 	const majors = [];
+	const skipped = [];
 	const targetByName = new Map();
 	names.forEach((name, index) => {
 		const from = currentByName.get(name);
-		const { compatible, major } = picks[index];
+		const { compatible, major, skipped: skippedVersion } = picks[index];
 		if (compatible != null) {
 			updated.push({ name, from, to: compatible });
 			targetByName.set(name, compatible);
 		}
 		if (major != null) majors.push({ name, from: compatible ?? from, to: major });
+		if (skippedVersion != null) {
+			skipped.push({ name, from: compatible ?? from, to: skippedVersion, reason: skippedVersions[name].reason });
+		}
 	});
 	failures.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -266,10 +300,11 @@ async function main() {
 	}
 
 	const { pending, held } = splitHeldMajors(majors, heldMajors);
-	const report = renderReport({ updated, majors: pending, held, failures, minAgeSeconds });
+	const kept = [...skipped, ...held];
+	const report = renderReport({ updated, majors: pending, held: kept, failures, minAgeSeconds });
 	if (reportPath != null) writeFileSync(reportPath, report);
 	console.log(report);
-	console.log(`updated=${updated.length} majors=${pending.length} held=${held.length} failures=${failures.length}`);
+	console.log(`updated=${updated.length} majors=${pending.length} held=${kept.length} failures=${failures.length}`);
 }
 
 if (import.meta.main) {

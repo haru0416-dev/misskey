@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { pickUpdate, splitHeldMajors, syncOverrides } from './update-deps.mjs';
+import { pickUpdate, pickUpdateSkipping, splitHeldMajors, syncOverrides } from './update-deps.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.UTC(2026, 8, 28);
@@ -45,6 +45,46 @@ describe('pickUpdate', () => {
 		expect(pickUpdate('1.2.3', [{ version: '1.2.4', time: Number.NaN, deprecated: false }], now, minAge)).toEqual({
 			compatible: null,
 			major: null,
+		});
+	});
+});
+
+describe('pickUpdateSkipping', () => {
+	const skip = { versions: ['3.3.12'] };
+
+	test('飛ばす版しか新しい版が無ければ上げず、飛ばした版を返す', () => {
+		const versions = [released('3.3.11', 50), released('3.3.12', 10)];
+		expect(pickUpdateSkipping('3.3.11', versions, now, minAge, skip)).toEqual({
+			compatible: null,
+			major: null,
+			skipped: '3.3.12',
+		});
+	});
+
+	test('飛ばす版より古い互換版があればそこまで上げる', () => {
+		const versions = [released('3.3.10', 60), released('3.3.11', 50), released('3.3.12', 10)];
+		expect(pickUpdateSkipping('3.3.10', versions, now, minAge, skip)).toEqual({
+			compatible: '3.3.11',
+			major: null,
+			skipped: '3.3.12',
+		});
+	});
+
+	test('飛ばす版より新しい版が出ればそちらを選び、据え置きとして扱わない', () => {
+		const versions = [released('3.3.11', 50), released('3.3.12', 20), released('3.3.13', 10)];
+		expect(pickUpdateSkipping('3.3.11', versions, now, minAge, skip)).toEqual({
+			compatible: '3.3.13',
+			major: null,
+			skipped: null,
+		});
+	});
+
+	test('指定が無ければ pickUpdate と同じ版を選ぶ', () => {
+		const versions = [released('3.3.11', 50), released('3.3.12', 10)];
+		expect(pickUpdateSkipping('3.3.11', versions, now, minAge, undefined)).toEqual({
+			compatible: '3.3.12',
+			major: null,
+			skipped: null,
 		});
 	});
 });
