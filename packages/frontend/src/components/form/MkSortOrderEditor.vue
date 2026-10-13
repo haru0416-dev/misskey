@@ -11,13 +11,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 			:key="order.key"
 			:iconClass="order.direction === '+' ? 'ti ti-arrow-up' : 'ti ti-arrow-down'"
 			:exButtonIconClass="'ti ti-x'"
-			:content="order.key"
+			:content="keyLabel ? keyLabel(order.key) : order.key"
 			:class="$style.sortOrderTag"
 			@click="onToggleSortOrderButtonClicked(order)"
 			@exButtonClick="onRemoveSortOrderButtonClicked(order)"
 		/>
 	</div>
-	<MkButton :class="$style.sortOrderAddButton" @click="onAddSortOrderButtonClicked">
+	<MkButton :class="$style.sortOrderAddButton" :aria-label="i18n.ts.add" @click="onAddSortOrderButtonClicked">
 		<span class="ti ti-plus"></span>
 	</MkButton>
 </div>
@@ -30,6 +30,7 @@ import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import MkTagItem from '@/components/form/MkTagItem.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
+import { i18n } from '@/i18n.js';
 
 const emit = defineEmits<{
 	(ev: 'update', sortOrders: SortOrder<T>[]): void;
@@ -38,6 +39,8 @@ const emit = defineEmits<{
 const props = defineProps<{
 	baseOrderKeyNames: T[];
 	currentOrders: SortOrder<T>[];
+	/** 並び順のキーを画面に出すときの名前。省くとキーをそのまま出す。 */
+	keyLabel?: (key: T) => string;
 }>();
 
 const { currentOrders } = toRefs(props);
@@ -61,7 +64,7 @@ function onAddSortOrderButtonClicked(ev: PointerEvent) {
 		.filter(baseKey => !selectedKeys.has(baseKey))
 		.map(it => {
 			return {
-				text: it,
+				text: props.keyLabel ? props.keyLabel(it) : it,
 				action: () => {
 					emitOrder([...currentOrders.value, { key: it, direction: '+' }]);
 				},

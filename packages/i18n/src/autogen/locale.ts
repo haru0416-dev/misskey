@@ -10844,6 +10844,38 @@ export interface Locale extends ILocale {
              * 絵文字の更新・削除に失敗しました。詳細は登録ログをご確認ください。
              */
             "alertEmojisRegisterFailedDescription": string;
+            /**
+             * ファイルの種類
+             */
+            "fileType": string;
+            /**
+             * 公開 URL
+             */
+            "publicUrl": string;
+            /**
+             * 元の URL
+             */
+            "originalUrl": string;
+            /**
+             * 更新日時 (から)
+             */
+            "updatedAtFrom": string;
+            /**
+             * 更新日時 (まで)
+             */
+            "updatedAtTo": string;
+            /**
+             * 条件に合う絵文字はありません。
+             */
+            "noMatchingEmojis": string;
+            /**
+             * ZIP にエクスポート
+             */
+            "exportZip": string;
+            /**
+             * ZIP からインポート
+             */
+            "importZip": string;
         };
         "_logs": {
             /**
@@ -10884,19 +10916,19 @@ export interface Locale extends ILocale {
              * リモートから受信した{count}個の絵文字のインポートを行います。絵文字のライセンスに十分な注意を払ってください。実行しますか？
              */
             "confirmImportEmojisDescription": ParameterizedString<"count">;
+            /**
+             * 他のサーバーの絵文字はまだありません。
+             */
+            "emojisNothing": string;
         };
         "_local": {
-            /**
-             * 登録済み絵文字一覧
-             */
-            "tabTitleList": string;
             /**
              * 絵文字の登録
              */
             "tabTitleRegister": string;
             "_list": {
                 /**
-                 * 登録された絵文字はありません。
+                 * 登録済みの絵文字はありません。「絵文字の登録」タブから追加できます。
                  */
                 "emojisNothing": string;
                 /**
@@ -10944,6 +10976,18 @@ export interface Locale extends ILocale {
                  * 絵文字に設定されたロールで検索
                  */
                 "dialogSelectRoleTitle": string;
+                /**
+                 * 選択行にタグを追加
+                 */
+                "addTagToSelectionRows": string;
+                /**
+                 * 選択行からタグを外す
+                 */
+                "removeTagFromSelectionRows": string;
+                /**
+                 * 選んだ{count}個の絵文字が対象です。複数のタグは空白で区切ります。
+                 */
+                "tagsInputDescription": ParameterizedString<"count">;
             };
             "_register": {
                 /**
@@ -10955,13 +10999,29 @@ export interface Locale extends ILocale {
                  */
                 "uploadSettingDescription": string;
                 /**
-                 * ディレクトリ名を"category"に入力する
+                 * フォルダー名をカテゴリにする
                  */
                 "directoryToCategoryLabel": string;
                 /**
-                 * ディレクトリをドラッグ・ドロップした時に、ディレクトリ名を"category"に入力します。
+                 * フォルダーごとドロップしたとき、フォルダー名をカテゴリに入れます。
                  */
                 "directoryToCategoryCaption": string;
+                /**
+                 * 画像をここにドロップするか、ボタンから選びます。フォルダーごとドロップすると、中の画像をまとめて読み込みます。
+                 */
+                "dropAreaCaption": string;
+                /**
+                 * {count}個のファイルをドライブにアップロードします。実行しますか？
+                 */
+                "confirmUploadEmojisDescription": ParameterizedString<"count">;
+                /**
+                 * {count}個のファイルをアップロードできませんでした。失敗した理由を直してから、もう一度ドロップしてください。
+                 */
+                "uploadFailedCount": ParameterizedString<"count">;
+                /**
+                 * ドロップした画像は{count}個です。一度に読み込めるのは{max}個までなので、分けてドロップしてください。
+                 */
+                "tooManyDroppedFiles": ParameterizedString<"count" | "max">;
                 /**
                  * リストに表示されている絵文字を新たなカスタム絵文字として登録します。よろしいですか？（負荷を避けるため、一度の操作で登録可能な絵文字は{count}件までです）
                  */
@@ -12036,10 +12096,6 @@ export interface Locale extends ILocale {
          * 選択モード
          */
         "selectMode": string;
-        /**
-         * カスタム絵文字 (表で一括編集)
-         */
-        "customEmojisGrid": string;
         /**
          * シンプル
          */

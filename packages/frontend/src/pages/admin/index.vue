@@ -154,12 +154,6 @@ const menuDef = computed<SuperMenuDef[]>(() => [
 				active: currentPage.value?.route.name === 'emojis',
 			},
 			{
-				icon: 'ti ti-table',
-				text: i18n.ts._controlPanel.customEmojisGrid,
-				to: '/admin/emojis2',
-				active: currentPage.value?.route.name === 'emojis2',
-			},
-			{
 				icon: 'ti ti-sparkles',
 				text: i18n.ts.avatarDecorations,
 				to: '/admin/avatar-decorations',

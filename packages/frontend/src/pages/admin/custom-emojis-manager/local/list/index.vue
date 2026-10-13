@@ -4,54 +4,60 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkStickyContainer>
-	<template #header>
-		<MkPageHeader :overridePageMetadata="headerPageMetadata" :actions="headerActions"/>
-	</template>
-	<template #default>
-		<div class="_gaps" :class="$style.main">
-			<component :is="loadingHandler.component.value" v-if="loadingHandler.showing.value"/>
-			<template v-else>
-				<div v-if="gridItems.length === 0" style="text-align: center">
-					{{ i18n.ts._customEmojisManager._local._list.emojisNothing }}
-				</div>
+<div :class="$style.root" class="_gaps">
+	<MkFolder>
+		<template #icon><i class="ti ti-search"></i></template>
+		<template #label>{{ i18n.ts._customEmojisManager._gridCommon.searchSettings }}</template>
+		<template #caption>{{ i18n.ts._customEmojisManager._gridCommon.searchSettingCaption }}</template>
+		<XSearch
+			:query="searchQuery"
+			@queryUpdated="(query) => searchQuery = query"
+			@sortOrderUpdated="(orders) => sortOrders = orders"
+			@search="onSearchRequest"
+		/>
+	</MkFolder>
 
-				<template v-else>
-					<div :class="$style.grid">
-						<MkGrid :data="gridItems" :settings="setupGrid()" @event="onGridEvent"/>
-					</div>
-				</template>
-			</template>
+	<MkFolder>
+		<template #icon><i class="ti ti-notes"></i></template>
+		<template #label>{{ i18n.ts._customEmojisManager._gridCommon.registrationLogs }}</template>
+		<template #caption>{{ i18n.ts._customEmojisManager._gridCommon.registrationLogsCaption }}</template>
+		<XRegisterLogs :logs="requestLogs"/>
+	</MkFolder>
+
+	<component :is="loadingHandler.component.value" v-if="loadingHandler.showing.value"/>
+	<MkResult
+		v-else-if="gridItems.length === 0"
+		type="empty"
+		:text="searchedWithFilter ? i18n.ts._customEmojisManager._gridCommon.noMatchingEmojis : i18n.ts._customEmojisManager._local._list.emojisNothing"
+	/>
+	<template v-else>
+		<div :class="$style.gridArea">
+			<MkGrid :data="gridItems" :settings="setupGrid()" @event="onGridEvent"/>
 		</div>
-	</template>
 
-	<template #footer>
-		<div v-if="gridItems.length > 0" :class="$style.footer">
-			<div :class="$style.left">
-				<MkButton danger style="margin-right: auto" @click="onDeleteButtonClicked">
+		<XGridFooter>
+			<template #left>
+				<MkButton danger :disabled="deleteItemsCount === 0" @click="onDeleteButtonClicked">
 					{{ i18n.ts.delete }} ({{ deleteItemsCount }})
 				</MkButton>
-			</div>
-
-			<div :class="$style.center">
+			</template>
+			<template #center>
 				<MkPagingButtons :current="currentPage" :max="allPages" :buttonCount="5" @pageChanged="onPageChanged"/>
-			</div>
-
-			<div :class="$style.right">
-				<MkButton primary :disabled="updateButtonDisabled" @click="onUpdateButtonClicked">
+			</template>
+			<template #right>
+				<MkButton primary :disabled="updateButtonDisabled || updatedItemsCount === 0" @click="onUpdateButtonClicked">
 					{{ i18n.ts.update }} ({{ updatedItemsCount }})
 				</MkButton>
-				<MkButton @click="onGridResetButtonClicked">{{ i18n.ts.reset }}</MkButton>
-			</div>
-		</div>
+				<MkButton :disabled="updatedItemsCount === 0 && deleteItemsCount === 0" @click="onGridResetButtonClicked">{{ i18n.ts.reset }}</MkButton>
+			</template>
+		</XGridFooter>
 	</template>
-</MkStickyContainer>
+</div>
 </template>
 
 <script lang="ts">
 import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import type { GridSortOrderKey } from '../../impl.js';
-import type { PageHeaderItem } from '@/types/page-header.js';
 
 export type EmojiSearchQuery = {
 	name: string | null;
@@ -70,7 +76,7 @@ export type EmojiSearchQuery = {
 </script>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, nextTick, useCssModule } from 'vue';
+import { computed, onMounted, ref, nextTick, useCssModule } from 'vue';
 import * as Misskey from 'misskey-js';
 import type { RequestLogItem } from '@/pages/admin/custom-emojis-manager/impl.js';
 import type { GridCellValidationEvent, GridCellValueChangeEvent, GridEvent } from '@/components/grid/grid-event.js';
@@ -81,10 +87,15 @@ import {
 	emptyStrToNull,
 	emptyStrToUndefined,
 	createRoleColumnSetting,
+	emojiFieldLabel,
 	settleEmojiRequest,
 	toRequestLogs,
 } from '@/pages/admin/custom-emojis-manager/impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
+import MkFolder from '@/components/layout/MkFolder.vue';
+import XSearch from '@/pages/admin/custom-emojis-manager/local/list/search.vue';
+import XRegisterLogs from '@/pages/admin/custom-emojis-manager/logs.vue';
+import XGridFooter from '@/pages/admin/custom-emojis-manager/grid-footer.vue';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { validators } from '@/components/grid/cell-validators.js';
@@ -121,9 +132,8 @@ function setupGrid(): GridSetting {
 	const unique = validators.unique();
 	return {
 		root: {
+			// 表の領域 (.gridArea) をスクロール領域にして、見出しの行をその中で留める
 			noOverflowStyle: true,
-			rounded: false,
-			outerBorder: false,
 		},
 		row: {
 			showNumber: true,
@@ -160,6 +170,18 @@ function setupGrid(): GridSetting {
 								}
 							}
 						},
+					},
+					{
+						type: 'button',
+						text: i18n.ts._customEmojisManager._local._list.addTagToSelectionRows,
+						icon: 'ti ti-tag',
+						action: () => changeTagsOfRows(context.rangedRows, 'add'),
+					},
+					{
+						type: 'button',
+						text: i18n.ts._customEmojisManager._local._list.removeTagFromSelectionRows,
+						icon: 'ti ti-tag-off',
+						action: () => changeTagsOfRows(context.rangedRows, 'remove'),
 					},
 				];
 			},
@@ -201,22 +223,22 @@ function setupGrid(): GridSetting {
 			},
 			{
 				bindTo: 'name',
-				title: 'name',
+				title: emojiFieldLabel('name'),
 				type: 'text',
 				editable: true,
 				width: 140,
 				validators: [required, regex, unique],
 			},
-			{ bindTo: 'category', title: 'category', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'aliases', title: 'aliases', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'license', title: 'license', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
-			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
+			{ bindTo: 'category', title: emojiFieldLabel('category'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'aliases', title: emojiFieldLabel('aliases'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'license', title: emojiFieldLabel('license'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'isSensitive', title: emojiFieldLabel('isSensitive'), type: 'boolean', editable: true, width: 90 },
+			{ bindTo: 'localOnly', title: emojiFieldLabel('localOnly'), type: 'boolean', editable: true, width: 90 },
 			createRoleColumnSetting(gridItems),
-			{ bindTo: 'type', type: 'text', editable: false, width: 90 },
-			{ bindTo: 'updatedAt', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'publicUrl', type: 'text', editable: false, width: 180 },
-			{ bindTo: 'originalUrl', type: 'text', editable: false, width: 180 },
+			{ bindTo: 'type', title: emojiFieldLabel('type'), type: 'text', editable: false, width: 90 },
+			{ bindTo: 'updatedAt', title: emojiFieldLabel('updatedAt'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'publicUrl', title: emojiFieldLabel('publicUrl'), type: 'text', editable: false, width: 180 },
+			{ bindTo: 'originalUrl', title: i18n.ts._customEmojisManager._gridCommon.originalUrl, type: 'text', editable: false, width: 180 },
 		],
 		cells: {
 			contextMenuFactory(col, row, value, context) {
@@ -278,7 +300,6 @@ const searchQuery = ref<EmojiSearchQuery>({
 	sortOrders: [],
 	limit: 100,
 });
-let searchWindowOpening = false;
 
 const previousQuery = ref<string | undefined>(undefined);
 const sortOrders = ref<SortOrder<GridSortOrderKey>[]>([]);
@@ -362,6 +383,18 @@ async function onDeleteButtonClicked() {
 		return;
 	}
 
+	// 削除のあとに表を読み直すので、削除しない行の未保存の変更は消える。先に確かめる
+	if (updatedItemsCount.value > 0) {
+		const { canceled } = await os.confirm({
+			type: 'warning',
+			title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
+			text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
+		});
+		if (canceled) {
+			return;
+		}
+	}
+
 	const { canceled } = await os.confirm({
 		type: 'info',
 		text: i18n.tsx._customEmojisManager._local._list.confirmDeleteEmojisDescription({ count: deleteItems.length }),
@@ -376,6 +409,40 @@ async function onDeleteButtonClicked() {
 	}
 
 	await os.promiseDialog(action());
+	// 削除した行がチェックの付いたまま表に残らないよう、読み直す
+	await refreshCustomEmojis();
+}
+
+// 表への貼り付けはタグの欄を丸ごと置き換えるので、各絵文字の既存のタグを残したまま足す・外す操作は別に用意する
+async function changeTagsOfRows(rows: { index: number }[], mode: 'add' | 'remove') {
+	const ids = rows.map((row) => gridItems.value[row.index]?.id).filter((id): id is string => id != null);
+	if (ids.length === 0) {
+		return;
+	}
+	if (updatedItemsCount.value > 0) {
+		const { canceled } = await os.confirm({
+			type: 'warning',
+			title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
+			text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
+		});
+		if (canceled) {
+			return;
+		}
+	}
+	const { canceled, result } = await os.inputText({
+		title: mode === 'add' ? i18n.ts._customEmojisManager._local._list.addTagToSelectionRows : i18n.ts._customEmojisManager._local._list.removeTagFromSelectionRows,
+		text: i18n.tsx._customEmojisManager._local._list.tagsInputDescription({ count: ids.length }),
+		minLength: 1,
+	});
+	if (canceled) {
+		return;
+	}
+	const aliases = result.split(/\s+/).filter((it) => it !== '');
+	if (aliases.length === 0) {
+		return;
+	}
+	await os.apiWithDialog(mode === 'add' ? 'admin/emoji/add-aliases-bulk' : 'admin/emoji/remove-aliases-bulk', { ids, aliases });
+	await refreshCustomEmojis();
 }
 
 async function onGridResetButtonClicked() {
@@ -393,8 +460,21 @@ async function onGridResetButtonClicked() {
 }
 
 async function onSearchRequest() {
+	// 検索し直すと表の未保存の変更が消えるので、ページ切り替えと同じく確かめる
+	if (updatedItemsCount.value > 0) {
+		const { canceled } = await os.confirm({
+			type: 'warning',
+			title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
+			text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
+		});
+		if (canceled) {
+			return;
+		}
+	}
 	await refreshCustomEmojis();
 }
+
+const searchedWithFilter = ref(false);
 
 async function onPageChanged(pageNumber: number) {
 	if (updatedItemsCount.value > 0) {
@@ -452,15 +532,18 @@ async function refreshCustomEmojis() {
 		...(aliases === undefined ? {} : { aliases }),
 		...(category === undefined ? {} : { category }),
 		...(license === undefined ? {} : { license }),
-		...(searchQuery.value.sensitive == null ? {} : { isSensitive: Boolean(searchQuery.value.sensitive).valueOf() }),
-		...(searchQuery.value.localOnly == null ? {} : { localOnly: Boolean(searchQuery.value.localOnly).valueOf() }),
+		// 選択肢の値は文字列の 'true' / 'false' なので、Boolean() ではなく比べて真偽にする ('false' も Boolean では true になる)
+		...(searchQuery.value.sensitive == null ? {} : { isSensitive: searchQuery.value.sensitive === 'true' }),
+		...(searchQuery.value.localOnly == null ? {} : { localOnly: searchQuery.value.localOnly === 'true' }),
 		...(updatedAtFrom === undefined ? {} : { updatedAtFrom }),
 		...(updatedAtTo === undefined ? {} : { updatedAtTo }),
 		roleIds: searchQuery.value.roles.map((it) => it.id),
 		hostType: 'local',
 	};
 
-	if (JSON.stringify(query) !== previousQuery.value) {
+	// 件数を変えたときもページを 1 に戻す (戻さないと、件数を増やしたときに範囲外のページを引いて空になる)
+	const queryKey = JSON.stringify({ query, limit });
+	if (queryKey !== previousQuery.value) {
 		currentPage.value = 1;
 	}
 
@@ -473,10 +556,20 @@ async function refreshCustomEmojis() {
 		}),
 	);
 
+	// 最後のページの行をすべて削除すると、今のページが範囲外になって空になる。最後のページへ戻して読み直す
+	if (result.emojis.length === 0 && result.allPages > 0 && currentPage.value > result.allPages) {
+		currentPage.value = result.allPages;
+		previousQuery.value = queryKey;
+		await refreshCustomEmojis();
+		return;
+	}
+
 	customEmojis.value = result.emojis;
 	allPages.value = result.allPages;
 
-	previousQuery.value = JSON.stringify(query);
+	previousQuery.value = queryKey;
+	// 空のときの文言は、入力中の欄ではなく実際に検索した条件で決める
+	searchedWithFilter.value = Object.keys(query).some((key) => key !== 'hostType' && key !== 'roleIds') || (query.roleIds?.length ?? 0) > 0;
 
 	refreshGridItems();
 }
@@ -505,110 +598,14 @@ function refreshGridItems() {
 onMounted(async () => {
 	await refreshCustomEmojis();
 });
-
-const headerPageMetadata = computed(() => ({
-	title: i18n.ts._customEmojisManager._local.tabTitleList,
-	icon: 'ti ti-icons',
-}));
-
-const headerActions = computed<PageHeaderItem[]>(() => [
-	{
-		icon: 'ti ti-search',
-		text: i18n.ts.search,
-		handler: async () => {
-			if (searchWindowOpening) {
-				return;
-			}
-			searchWindowOpening = true;
-			const { dispose } = await os.popupAsyncWithDialog(
-				import('./search.vue').then((x) => x.default),
-				{
-					query: searchQuery.value,
-				},
-				{
-					queryUpdated: (query: EmojiSearchQuery) => {
-						searchQuery.value = query;
-					},
-					sortOrderUpdated: (orders: SortOrder<GridSortOrderKey>[]) => {
-						sortOrders.value = orders;
-					},
-					search: () => {
-						onSearchRequest();
-					},
-					closed: () => {
-						dispose();
-						searchWindowOpening = false;
-					},
-				},
-			);
-		},
-	},
-	{
-		icon: 'ti ti-list-numbers',
-		text: i18n.ts._customEmojisManager._gridCommon.searchLimit,
-		handler: (ev) => {
-			async function changeSearchLimit(to: number) {
-				if (updatedItemsCount.value > 0) {
-					const { canceled } = await os.confirm({
-						type: 'warning',
-						title: i18n.ts._customEmojisManager._local._list.confirmChangeView,
-						text: i18n.ts._customEmojisManager._local._list.confirmMovePageDesciption,
-					});
-					if (canceled) {
-						return;
-					}
-				}
-
-				searchQuery.value.limit = to;
-				refreshCustomEmojis();
-			}
-
-			os.popupMenu(
-				[
-					{
-						type: 'radioOption',
-						text: '25',
-						active: computed(() => searchQuery.value.limit === 25),
-						action: () => changeSearchLimit(25),
-					},
-					{
-						type: 'radioOption',
-						text: '50',
-						active: computed(() => searchQuery.value.limit === 50),
-						action: () => changeSearchLimit(50),
-					},
-					{
-						type: 'radioOption',
-						text: '100',
-						active: computed(() => searchQuery.value.limit === 100),
-						action: () => changeSearchLimit(100),
-					},
-				],
-				ev.currentTarget ?? ev.target,
-			);
-		},
-	},
-	{
-		icon: 'ti ti-notes',
-		text: i18n.ts._customEmojisManager._gridCommon.registrationLogs,
-		handler: async () => {
-			const { dispose } = await os.popupAsyncWithDialog(
-				import('./logs.vue').then((x) => x.default),
-				{
-					logs: requestLogs.value,
-				},
-				{
-					closed: () => {
-						dispose();
-					},
-				},
-			);
-		},
-	},
-]);
 </script>
 
 <style module lang="scss">
+.root {
+	padding: 16px;
+	container-type: inline-size;
+}
+
 .changedRow {
 	background-color: var(--MI_THEME-infoBg) !important;
 }
@@ -617,52 +614,9 @@ const headerActions = computed<PageHeaderItem[]>(() => [
 	background-color: var(--MI_THEME-infoWarnBg) !important;
 }
 
-.main {
-	height: calc(100vh - var(--MI-stickyTop) - var(--MI-stickyBottom));
-	overflow: scroll;
+/* 列が多く画面より広く、行も多いので、表だけを縦横にスクロールさせて見出しの行を上に留める */
+.gridArea {
+	overflow: auto;
+	max-height: calc(100dvh - var(--MI-stickyTop, 0px) - var(--MI-stickyBottom, 0px) - 80px);
 }
-
-.grid {
-	width: max-content;
-	border-bottom: 1px solid var(--MI_THEME-divider);
-}
-
-.footer {
-	background-color: var(--MI_THEME-bg);
-
-	padding: var(--MI-margin);
-	border-top: 1px solid var(--MI_THEME-divider);
-
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 8px;
-
-	& .left {
-		display: flex;
-		align-items: center;
-		justify-content: flex-start;
-		gap: 8px;
-	}
-
-	& .center {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
-	}
-
-	& .right {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		flex-direction: row;
-		gap: 8px;
-	}
-}
-
-.divider {
-	margin: 8px 0;
-	border-top: solid 0.5px var(--MI_THEME-divider);
-}
-
 </style>

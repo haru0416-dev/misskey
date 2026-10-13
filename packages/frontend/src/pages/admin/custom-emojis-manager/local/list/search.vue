@@ -4,142 +4,72 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkWindow
-	ref="uiWindow"
-	:initialWidth="400"
-	:initialHeight="500"
-	:canResize="true"
-	@closed="emit('closed')"
->
-	<template #header>
-		<i class="ti ti-search" style="margin-right: 0.5em;"></i> {{ i18n.ts.search }}
-	</template>
-	<div :class="$style.root">
-		<div class="_spacer">
-			<div class="_gaps">
-				<div class="_gaps_s">
-					<MkInput
-						v-model="model.name"
-						type="search"
-						autocapitalize="off"
-					>
-						<template #label>name</template>
-					</MkInput>
-					<MkInput
-						v-model="model.category"
-						type="search"
-						autocapitalize="off"
-					>
-						<template #label>category</template>
-					</MkInput>
-					<MkInput
-						v-model="model.aliases"
-						type="search"
-						autocapitalize="off"
-					>
-						<template #label>aliases</template>
-					</MkInput>
-
-					<MkInput
-						v-model="model.type"
-						type="search"
-						autocapitalize="off"
-					>
-						<template #label>type</template>
-					</MkInput>
-					<MkInput
-						v-model="model.license"
-						type="search"
-						autocapitalize="off"
-					>
-						<template #label>license</template>
-					</MkInput>
-					<MkSelect
-						v-model="model.sensitive"
-						:items="[
-							{ label: '-', value: null },
-							{ label: 'true', value: 'true' },
-							{ label: 'false', value: 'false' },
-						]"
-					>
-						<template #label>sensitive</template>
-					</MkSelect>
-
-					<MkSelect
-						v-model="model.localOnly"
-						:items="[
-							{ label: '-', value: null },
-							{ label: 'true', value: 'true' },
-							{ label: 'false', value: 'false' },
-						]"
-					>
-						<template #label>localOnly</template>
-					</MkSelect>
-					<MkInput
-						v-model="model.updatedAtFrom"
-						type="date"
-						autocapitalize="off"
-					>
-						<template #label>updatedAt(from)</template>
-					</MkInput>
-					<MkInput
-						v-model="model.updatedAtTo"
-						type="date"
-						autocapitalize="off"
-					>
-						<template #label>updatedAt(to)</template>
-					</MkInput>
-
-					<MkInput
-						v-model="queryRolesText"
-						type="text"
-						readonly
-						autocapitalize="off"
-						@click="onQueryRolesEditClicked"
-					>
-						<template #label>role</template>
-						<template #suffix><i class="ti ti-pencil"></i></template>
-					</MkInput>
-				</div>
-				<MkFolder :spacerMax="8" :spacerMin="8">
-					<template #icon><i class="ti ti-arrows-sort"></i></template>
-					<template #label>{{ i18n.ts._customEmojisManager._gridCommon.sortOrder }}</template>
-					<MkSortOrderEditor
-						:baseOrderKeyNames="gridSortOrderKeys"
-						:currentOrders="sortOrders"
-						@update="onSortOrderUpdate"
-					/>
-				</MkFolder>
-			</div>
-		</div>
-		<div :class="$style.footerActions">
-			<MkButton primary @click="onSearchRequest">
-				{{ i18n.ts.search }}
-			</MkButton>
-			<MkButton @click="onQueryResetButtonClicked">
-				{{ i18n.ts.reset }}
-			</MkButton>
-		</div>
+<div class="_gaps">
+	<div :class="$style.fields">
+		<MkInput v-model="model.name" type="search" autocapitalize="off" @enter="emit('search')">
+			<template #label>{{ emojiFieldLabel('name') }}</template>
+		</MkInput>
+		<MkInput v-model="model.category" type="search" autocapitalize="off" @enter="emit('search')">
+			<template #label>{{ emojiFieldLabel('category') }}</template>
+		</MkInput>
+		<MkInput v-model="model.aliases" type="search" autocapitalize="off" @enter="emit('search')">
+			<template #label>{{ emojiFieldLabel('aliases') }}</template>
+		</MkInput>
+		<MkInput v-model="model.type" type="search" autocapitalize="off" @enter="emit('search')">
+			<template #label>{{ emojiFieldLabel('type') }}</template>
+		</MkInput>
+		<MkInput v-model="model.license" type="search" autocapitalize="off" @enter="emit('search')">
+			<template #label>{{ emojiFieldLabel('license') }}</template>
+		</MkInput>
+		<MkInput v-model="queryRolesText" type="text" readonly autocapitalize="off" @click="onQueryRolesEditClicked">
+			<template #label>{{ emojiFieldLabel('roles') }}</template>
+			<template #suffix><i class="ti ti-pencil"></i></template>
+		</MkInput>
+		<MkSelect v-model="model.sensitive" :items="booleanItems">
+			<template #label>{{ emojiFieldLabel('isSensitive') }}</template>
+		</MkSelect>
+		<MkSelect v-model="model.localOnly" :items="booleanItems">
+			<template #label>{{ emojiFieldLabel('localOnly') }}</template>
+		</MkSelect>
+		<MkSelect v-model="model.limit" :items="limitItems">
+			<template #label>{{ i18n.ts._customEmojisManager._gridCommon.searchLimit }}</template>
+		</MkSelect>
+		<MkInput v-model="model.updatedAtFrom" type="date">
+			<template #label>{{ i18n.ts._customEmojisManager._gridCommon.updatedAtFrom }}</template>
+		</MkInput>
+		<MkInput v-model="model.updatedAtTo" type="date">
+			<template #label>{{ i18n.ts._customEmojisManager._gridCommon.updatedAtTo }}</template>
+		</MkInput>
 	</div>
-</MkWindow>
+
+	<MkFolder :spacerMax="8" :spacerMin="8">
+		<template #icon><i class="ti ti-arrows-sort"></i></template>
+		<template #label>{{ i18n.ts._customEmojisManager._gridCommon.sortOrder }}</template>
+		<MkSortOrderEditor
+			:baseOrderKeyNames="gridSortOrderKeys"
+			:currentOrders="sortOrders"
+			:keyLabel="emojiFieldLabel"
+			@update="onSortOrderUpdate"
+		/>
+	</MkFolder>
+
+	<div :class="$style.buttons">
+		<MkButton primary @click="emit('search')">{{ i18n.ts.search }}</MkButton>
+		<MkButton @click="onQueryResetButtonClicked">{{ i18n.ts.reset }}</MkButton>
+	</div>
+</div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import MkWindow from '@/components/overlay/MkWindow.vue';
 import MkInput from '@/components/form/MkInput.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkSortOrderEditor from '@/components/form/MkSortOrderEditor.vue';
-
-import {
-	gridSortOrderKeys,
-} from '../../impl.js';
-
+import { emojiFieldLabel, gridSortOrderKeys } from '../../impl.js';
 import { i18n } from '@/i18n.js';
 import * as os from '@/os.js';
-
 import type { EmojiSearchQuery } from './index.vue';
 import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import type { GridSortOrderKey } from '../../impl.js';
@@ -149,14 +79,20 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	(ev: 'closed'): void;
 	(ev: 'queryUpdated', query: EmojiSearchQuery): void;
 	(ev: 'sortOrderUpdated', orders: SortOrder<GridSortOrderKey>[]): void;
 	(ev: 'search'): void;
 }>();
 
+const booleanItems = [
+	{ label: '-', value: null },
+	{ label: i18n.ts.yes, value: 'true' },
+	{ label: i18n.ts.no, value: 'false' },
+];
+const limitItems = [25, 50, 100].map((n) => ({ label: `${n}`, value: n }));
+
 const model = ref<EmojiSearchQuery>(props.query);
-const queryRolesText = computed(() => model.value.roles.map(it => it.name).join(','));
+const queryRolesText = computed(() => model.value.roles.map(it => it.name).join(', '));
 
 watch(model, () => {
 	emit('queryUpdated', model.value);
@@ -169,10 +105,6 @@ function onSortOrderUpdate(orders: SortOrder<GridSortOrderKey>[]) {
 	emit('sortOrderUpdated', orders);
 }
 
-function onSearchRequest() {
-	emit('search');
-}
-
 function onQueryResetButtonClicked() {
 	model.value.name = '';
 	model.value.category = '';
@@ -183,7 +115,9 @@ function onQueryResetButtonClicked() {
 	model.value.localOnly = null;
 	model.value.updatedAtFrom = '';
 	model.value.updatedAtTo = '';
+	model.value.roles = [];
 	sortOrders.value = [];
+	emit('sortOrderUpdated', []);
 }
 
 async function onQueryRolesEditClicked() {
@@ -200,18 +134,16 @@ async function onQueryRolesEditClicked() {
 }
 </script>
 
-<style module>
-.root {
-	position: relative;
+<style lang="scss" module>
+.fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 12px 16px;
 }
 
-.footerActions {
-	position: sticky;
-	bottom: 0;
-	padding: var(--MI-margin);
-	background-color: var(--MI_THEME-bg);
+.buttons {
 	display: flex;
+	justify-content: flex-end;
 	gap: 8px;
-	z-index: 1;
 }
 </style>

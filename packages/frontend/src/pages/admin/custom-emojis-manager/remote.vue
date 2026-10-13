@@ -15,56 +15,52 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</template>
 
 				<div class="_gaps">
-					<div :class="[[spMode ? $style.searchAreaSp : $style.searchArea]]">
+					<div :class="$style.fields">
 						<MkInput
 							v-model="queryName"
 							type="search"
 							autocapitalize="off"
-							:class="[$style.col1, $style.row1]"
 							@enter="onSearchRequest"
 						>
-							<template #label>name</template>
+							<template #label>{{ emojiFieldLabel('name') }}</template>
 						</MkInput>
 						<MkInput
 							v-model="queryHost"
 							type="search"
 							autocapitalize="off"
-							:class="[$style.col2, $style.row1]"
 							@enter="onSearchRequest"
 						>
-							<template #label>host</template>
+							<template #label>{{ emojiFieldLabel('host') }}</template>
 						</MkInput>
 						<MkInput
 							v-model="queryLicense"
 							type="search"
 							autocapitalize="off"
-							:class="[$style.col3, $style.row1]"
 							@enter="onSearchRequest"
 						>
-							<template #label>license</template>
+							<template #label>{{ emojiFieldLabel('license') }}</template>
 						</MkInput>
 
 						<MkInput
 							v-model="queryUri"
 							type="search"
 							autocapitalize="off"
-							:class="[$style.col1, $style.row2]"
 							@enter="onSearchRequest"
 						>
-							<template #label>uri</template>
+							<template #label>{{ emojiFieldLabel('uri') }}</template>
 						</MkInput>
 						<MkInput
 							v-model="queryPublicUrl"
 							type="search"
 							autocapitalize="off"
-							:class="[$style.col2, $style.row2]"
 							@enter="onSearchRequest"
 						>
-							<template #label>publicUrl</template>
+							<template #label>{{ emojiFieldLabel('publicUrl') }}</template>
 						</MkInput>
+						<MkSelect v-model="queryLimit" :items="limitItems">
+							<template #label>{{ i18n.ts._customEmojisManager._gridCommon.searchLimit }}</template>
+						</MkSelect>
 					</div>
-
-					<hr>
 
 					<MkFolder :spacerMax="8" :spacerMin="8">
 						<template #icon><i class="ti ti-arrows-sort"></i></template>
@@ -72,19 +68,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<MkSortOrderEditor
 							:baseOrderKeyNames="gridSortOrderKeys"
 							:currentOrders="sortOrders"
+							:keyLabel="emojiFieldLabel"
 							@update="onSortOrderUpdate"
 						/>
 					</MkFolder>
 
-					<MkInput
-						v-model="queryLimit"
-						type="number"
-						:max="100"
-					>
-						<template #label>{{ i18n.ts._customEmojisManager._gridCommon.searchLimit }}</template>
-					</MkInput>
 
-					<div :class="[[spMode ? $style.searchButtonsSp : $style.searchButtons]]">
+					<div :class="$style.buttons">
 						<MkButton primary @click="onSearchRequest">
 							{{ i18n.ts.search }}
 						</MkButton>
@@ -106,32 +96,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 			<component :is="loadingHandler.component.value" v-if="loadingHandler.showing.value"/>
 			<template v-else>
-				<div v-if="gridItems.length === 0" style="text-align: center">
-					{{ i18n.ts._customEmojisManager._local._list.emojisNothing }}
-				</div>
+				<MkResult
+					v-if="gridItems.length === 0"
+					type="empty"
+					:text="searchedWithFilter ? i18n.ts._customEmojisManager._gridCommon.noMatchingEmojis : i18n.ts._customEmojisManager._remote.emojisNothing"
+				/>
 
 				<template v-else>
-					<div v-if="gridItems.length > 0" :class="$style.gridArea">
+					<div :class="$style.gridArea">
 						<MkGrid :data="gridItems" :settings="setupGrid()" @event="onGridEvent"/>
 					</div>
 
-					<div :class="$style.footer">
-						<div>
-							<!-- ページ切り替えを中央列に置くため、操作ボタンと対になる左列を空ける。 -->
-						</div>
-
-						<div :class="$style.center">
+					<XGridFooter>
+						<template #center>
 							<MkPagingButtons :current="currentPage" :max="allPages" :buttonCount="5" @pageChanged="onPageChanged"/>
-						</div>
-
-						<div :class="$style.right">
-							<MkButton primary @click="onImportClicked">
-								{{
-									i18n.ts._customEmojisManager._remote.importEmojisButton
-								}} ({{ checkedItemsCount }})
+						</template>
+						<template #right>
+							<MkButton primary :disabled="checkedItemsCount === 0" @click="onImportClicked">
+								{{ i18n.ts._customEmojisManager._remote.importEmojisButton }} ({{ checkedItemsCount }})
 							</MkButton>
-						</div>
-					</div>
+						</template>
+					</XGridFooter>
 				</template>
 			</template>
 		</div>
@@ -148,12 +133,16 @@ import type { GridSetting } from '@/components/grid/grid.js';
 import type { SortOrder } from '@/components/form/MkSortOrderEditor.define.js';
 import MkRemoteEmojiEditDialog from '@/features/custom-emoji/components/MkRemoteEmojiEditDialog.vue';
 import { misskeyApi } from '@/utility/misskey-api.js';
+import { getProxiedImageUrl } from '@/utility/media-proxy.js';
 import { i18n } from '@/i18n.js';
 import MkButton from '@/components/form/MkButton.vue';
 import MkInput from '@/components/form/MkInput.vue';
+import MkSelect from '@/components/form/MkSelect.vue';
 import MkGrid from '@/components/grid/MkGrid.vue';
+import XGridFooter from '@/pages/admin/custom-emojis-manager/grid-footer.vue';
 import {
 	emptyStrToUndefined,
+	emojiFieldLabel,
 	gridSortOrderKeys,
 	settleEmojiRequest,
 	toRequestLogs,
@@ -161,7 +150,6 @@ import {
 import MkFolder from '@/components/layout/MkFolder.vue';
 import XRegisterLogs from '@/pages/admin/custom-emojis-manager/logs.vue';
 import * as os from '@/os.js';
-import { deviceKind } from '@/utility/device-kind.js';
 import MkPagingButtons from '@/components/layout/MkPagingButtons.vue';
 import MkSortOrderEditor from '@/components/form/MkSortOrderEditor.vue';
 import { useLoading } from '@/composables/useLoading.js';
@@ -178,6 +166,10 @@ function setupGrid(): GridSetting {
 	const $style = useCssModule();
 
 	return {
+		root: {
+			// 表の領域 (.gridArea) をスクロール領域にして、見出しの行をその中で留める
+			noOverflowStyle: true,
+		},
 		row: {
 			minimumDefinitionCount: 100,
 			styleRules: [
@@ -206,11 +198,11 @@ function setupGrid(): GridSetting {
 		cols: [
 			{ bindTo: 'checked', icon: 'ti-download', type: 'boolean', editable: true, width: 34 },
 			{ bindTo: 'url', icon: 'ti-icons', type: 'image', editable: false, width: 'auto' },
-			{ bindTo: 'name', title: 'name', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'host', title: 'host', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'license', title: 'license', type: 'text', editable: false, width: 200 },
-			{ bindTo: 'uri', title: 'uri', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'publicUrl', title: 'publicUrl', type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'name', title: emojiFieldLabel('name'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'host', title: emojiFieldLabel('host'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'license', title: emojiFieldLabel('license'), type: 'text', editable: false, width: 200 },
+			{ bindTo: 'uri', title: emojiFieldLabel('uri'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'publicUrl', title: emojiFieldLabel('publicUrl'), type: 'text', editable: false, width: 'auto' },
 		],
 		cells: {
 			contextMenuFactory: (col, row, value, context) => {
@@ -275,14 +267,15 @@ const queryHost = ref<string | null>(null);
 const queryLicense = ref<string | null>(null);
 const queryUri = ref<string | null>(null);
 const queryPublicUrl = ref<string | null>(null);
+const searchedWithFilter = ref(false);
 const queryLimit = ref<number>(100);
+const limitItems = [25, 50, 100].map((n) => ({ label: `${n}`, value: n }));
 const previousQuery = ref<string | undefined>(undefined);
 const sortOrders = ref<SortOrder<GridSortOrderKey>[]>([]);
 const requestLogs = ref<RequestLogItem[]>([]);
 
 const gridItems = ref<GridItem[]>([]);
 
-const spMode = computed(() => ['smartphone', 'tablet'].includes(deviceKind));
 const checkedItemsCount = computed(() => gridItems.value.filter((it) => it.checked).length);
 
 function onSortOrderUpdate(_sortOrders: SortOrder<GridSortOrderKey>[]) {
@@ -370,7 +363,9 @@ async function refreshCustomEmojis() {
 		hostType: 'remote',
 	};
 
-	if (JSON.stringify(query) !== previousQuery.value) {
+	// 件数を変えたときもページを 1 に戻す (戻さないと、件数を増やしたときに範囲外のページを引いて空になる)
+	const queryKey = JSON.stringify({ query, limit: queryLimit.value });
+	if (queryKey !== previousQuery.value) {
 		currentPage.value = 1;
 	}
 
@@ -385,11 +380,14 @@ async function refreshCustomEmojis() {
 
 	customEmojis.value = result.emojis;
 	allPages.value = result.allPages;
-	previousQuery.value = JSON.stringify(query);
+	previousQuery.value = queryKey;
+	// 空のときの文言は、入力中の欄ではなく実際に検索した条件で決める
+	searchedWithFilter.value = Object.keys(query).some((key) => key !== 'hostType');
 	gridItems.value = customEmojis.value.map((it) => ({
 		checked: false,
 		id: it.id,
-		url: it.publicUrl,
+		// 他のサーバーの画像を管理者のブラウザから直接読むと、そのサーバーに IP アドレスが伝わるので、メディアプロキシを通す
+		url: getProxiedImageUrl(it.publicUrl, 'emoji'),
 		name: it.name,
 		license: it.license,
 		host: it.host!,
@@ -402,106 +400,30 @@ onMounted(async () => {
 </script>
 
 <style module lang="scss">
-.row1 {
-	grid-row: 1 / 2;
-}
-
-.row2 {
-	grid-row: 2 / 3;
-}
-
-.col1 {
-	grid-column: 1 / 2;
-}
-
-.col2 {
-	grid-column: 2 / 3;
-}
-
-.col3 {
-	grid-column: 3 / 4;
-}
-
 .root {
 	padding: 16px;
+	container-type: inline-size;
 }
 
 .changedRow {
 	background-color: var(--MI_THEME-infoBg) !important;
 }
 
-.searchArea {
+.fields {
 	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 16px;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 12px 16px;
 }
 
-.searchButtons {
+.buttons {
 	display: flex;
 	justify-content: flex-end;
-	align-items: flex-end;
 	gap: 8px;
 }
 
-.searchButtonsSp {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	gap: 8px;
-}
-
-.searchAreaSp {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
+/* 列が多く画面より広く、行も多いので、表だけを縦横にスクロールさせて見出しの行を上に留める */
 .gridArea {
-	padding-top: 8px;
-	padding-bottom: 8px;
-}
-
-.pages {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-
-	button {
-		background-color: var(--MI_THEME-buttonBg);
-		border-radius: 9999px;
-		border: none;
-		margin: 0 4px;
-		padding: 8px;
-	}
-}
-
-.footer {
-	background-color: var(--MI_THEME-bg);
-
-	position: sticky;
-	left:0;
-	bottom:0;
-	z-index: 1;
-	// sticky フッター自身に上下の余白を持たせ、負のマージンで外側の余白と相殺する。
-	margin-top: calc(var(--MI-margin) * -1);
-	margin-bottom: calc(var(--MI-margin) * -1);
-	padding-top: var(--MI-margin);
-	padding-bottom: var(--MI-margin);
-
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 8px;
-
-	& .center {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-
-	& .right {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-	}
+	overflow: auto;
+	max-height: calc(100dvh - var(--MI-stickyTop, 0px) - var(--MI-stickyBottom, 0px) - 80px);
 }
 </style>

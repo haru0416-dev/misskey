@@ -434,7 +434,7 @@ export const ROUTE_DEF = [
 	},
 	{
 		path: '/custom-emojis-manager',
-		component: page(() => import('@/pages/custom-emojis-manager.vue')),
+		component: page(() => import('@/pages/admin/custom-emojis-manager/index.vue')),
 	},
 	{
 		path: '/avatar-decorations',
@@ -494,11 +494,6 @@ export const ROUTE_DEF = [
 			{
 				path: '/emojis',
 				name: 'emojis',
-				component: page(() => import('@/pages/custom-emojis-manager.vue')),
-			},
-			{
-				path: '/emojis2',
-				name: 'emojis2',
 				component: page(() => import('@/pages/admin/custom-emojis-manager/index.vue')),
 			},
 			{

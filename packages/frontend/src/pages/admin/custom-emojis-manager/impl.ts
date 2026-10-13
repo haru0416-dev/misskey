@@ -31,6 +31,36 @@ export const gridSortOrderKeys = [
 
 export type GridSortOrderKey = (typeof gridSortOrderKeys)[number];
 
+/** 表の列・検索欄・並び順に出す項目の名前。 */
+export function emojiFieldLabel(key: GridSortOrderKey | 'roles'): string {
+	switch (key) {
+		case 'name':
+			return i18n.ts.name;
+		case 'category':
+			return i18n.ts.category;
+		case 'aliases':
+			return i18n.ts.tags;
+		case 'type':
+			return i18n.ts._customEmojisManager._gridCommon.fileType;
+		case 'license':
+			return i18n.ts.license;
+		case 'host':
+			return i18n.ts.host;
+		case 'uri':
+			return 'URI';
+		case 'publicUrl':
+			return i18n.ts._customEmojisManager._gridCommon.publicUrl;
+		case 'isSensitive':
+			return i18n.ts.sensitive;
+		case 'localOnly':
+			return i18n.ts.localOnly;
+		case 'updatedAt':
+			return i18n.ts.updatedAt;
+		case 'roles':
+			return i18n.ts.rolesThatCanBeUsedThisEmojiAsReaction;
+	}
+}
+
 export function emptyStrToUndefined(value: string | null) {
 	return value ? value : undefined;
 }
@@ -69,7 +99,7 @@ export function createRoleColumnSetting(
 ): GridColumnSetting {
 	return {
 		bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction',
-		title: 'role',
+		title: emojiFieldLabel('roles'),
 		type: 'text',
 		editable: true,
 		width: 140,

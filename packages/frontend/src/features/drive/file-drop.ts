@@ -87,16 +87,22 @@ async function readDataTransferItems(itemList: DataTransferItemList): Promise<Dr
 		return await Promise.all(allEntries.map(readEntry));
 	}
 
-	const items = Array.of<DataTransferItem>();
+	// DataTransfer の項目はイベントの処理中しか読めないので、await の前に entry とファイルを取り出しておく。
+	// entry を返さない項目 (スクリプトから作った DataTransfer など) は、ファイルとして読めるものをそのまま使う。
+	const sources = Array.of<FileSystemEntry | File>();
 	for (const item of itemList) {
-		items.push(item);
+		const entry = item.webkitGetAsEntry();
+		const file = entry == null && item.kind === 'file' ? item.getAsFile() : null;
+		const source = entry ?? file;
+		if (source != null) {
+			sources.push(source);
+		}
 	}
 
 	return Promise.all(
-		items
-			.map((it) => it.webkitGetAsEntry())
-			.filter((it): it is FileSystemEntry => it != null)
-			.map(readEntry),
+		sources.map((source): Promise<DroppedItem> | DroppedItem =>
+			source instanceof File ? { isFile: true, path: source.name, file: source } : readEntry(source),
+		),
 	);
 }
 
