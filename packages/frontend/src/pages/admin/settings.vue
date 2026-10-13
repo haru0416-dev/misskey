@@ -114,7 +114,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<SearchMarker v-slot="slotProps" :keywords="['serviceWorker']">
 					<MkFolder :defaultOpen="slotProps.isParentOfTarget ?? false">
 						<template #icon><SearchIcon><i class="ti ti-world-cog"></i></SearchIcon></template>
-						<template #label><SearchLabel>ServiceWorker</SearchLabel></template>
+						<template #label><SearchLabel>{{ i18n.ts._controlPanel.serviceWorker }}</SearchLabel></template>
 						<template v-if="serviceWorkerForm.modified.value" #footer>
 							<MkFormFooter :form="serviceWorkerForm"/>
 						</template>
@@ -130,14 +130,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template v-if="serviceWorkerForm.state.enableServiceWorker">
 								<SearchMarker>
 									<MkInput v-model="serviceWorkerForm.state.swPublicKey">
-										<template #label><SearchLabel>Public key</SearchLabel><span v-if="serviceWorkerForm.modifiedStates.swPublicKey" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.vapidPublicKey }}</SearchLabel><span v-if="serviceWorkerForm.modifiedStates.swPublicKey" class="_modified">{{ i18n.ts.modified }}</span></template>
 										<template #prefix><i class="ti ti-key"></i></template>
 									</MkInput>
 								</SearchMarker>
 
 								<SearchMarker>
 									<MkInput v-model="serviceWorkerForm.state.swPrivateKey">
-										<template #label><SearchLabel>Private key</SearchLabel><span v-if="serviceWorkerForm.modifiedStates.swPrivateKey" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.vapidPrivateKey }}</SearchLabel><span v-if="serviceWorkerForm.modifiedStates.swPrivateKey" class="_modified">{{ i18n.ts.modified }}</span></template>
 										<template #prefix><i class="ti ti-key"></i></template>
 									</MkInput>
 								</SearchMarker>

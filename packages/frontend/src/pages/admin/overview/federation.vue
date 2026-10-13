@@ -139,7 +139,7 @@ onMounted(() => {
 
 					> .subTitle {
 						font-size: 85%;
-						opacity: 0.7;
+						color: var(--MI-text-muted);
 					}
 				}
 			}
@@ -195,7 +195,7 @@ onMounted(() => {
 
 					> .label {
 						font-size: 0.8em;
-						opacity: 0.5;
+						color: var(--MI-text-muted);
 					}
 				}
 			}

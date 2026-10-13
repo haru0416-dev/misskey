@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label>{{ i18n.ts.search }}</template>
 				</MkInput>
 				<MkSwitch v-model="selectMode" style="margin: 8px 0;">
-					<template #label>Select mode</template>
+					<template #label>{{ i18n.ts._controlPanel.selectMode }}</template>
 				</MkSwitch>
 				<div v-if="selectMode" class="_buttons">
 					<MkButton inline @click="selectAll">Select all</MkButton>

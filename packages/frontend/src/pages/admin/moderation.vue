@@ -61,6 +61,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-lock-star"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.preservedUsernames }}</SearchLabel></template>
+						<template #suffix>{{ countLines(preservedUsernames) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="preservedUsernames">
@@ -75,6 +76,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-message-exclamation"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.sensitiveWords }}</SearchLabel></template>
+						<template #suffix>{{ countLines(sensitiveWords) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="sensitiveWords">
@@ -89,6 +91,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-message-x"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.prohibitedWords }}</SearchLabel></template>
+						<template #suffix>{{ countLines(prohibitedWords) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="prohibitedWords">
@@ -103,6 +106,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-user-x"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.prohibitedWordsForNameOfUser }}</SearchLabel></template>
+						<template #suffix>{{ countLines(prohibitedWordsForNameOfUser) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="prohibitedWordsForNameOfUser">
@@ -117,6 +121,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-eye-off"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.hiddenTags }}</SearchLabel></template>
+						<template #suffix>{{ countLines(hiddenTags) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="hiddenTags">
@@ -131,6 +136,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-eye-off"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.silencedInstances }}</SearchLabel></template>
+						<template #suffix>{{ countLines(silencedHosts) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="silencedHosts">
@@ -145,6 +151,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-eye-off"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.mediaSilencedInstances }}</SearchLabel></template>
+						<template #suffix>{{ countLines(mediaSilencedHosts) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="mediaSilencedHosts">
@@ -159,6 +166,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkFolder>
 						<template #icon><SearchIcon><i class="ti ti-ban"></i></SearchIcon></template>
 						<template #label><SearchLabel>{{ i18n.ts.blockedInstances }}</SearchLabel></template>
+						<template #suffix>{{ countLines(blockedHosts) }}</template>
 
 						<div class="_gaps">
 							<MkTextarea v-model="blockedHosts">
@@ -206,6 +214,12 @@ const { model: ugcVisibilityForVisitor, def: ugcVisibilityForVisitorDef } = useM
 	],
 	initialValue: meta.ugcVisibilityForVisitor,
 });
+// 1 行に 1 件で書く設定を、閉じたままでも何件あるか分かるように数える
+function countLines(text: string): string {
+	const n = text.split('\n').filter((line) => line.trim() !== '').length;
+	return n === 0 ? i18n.ts.notSet : i18n.tsx._controlPanel.itemCount({ n });
+}
+
 const sensitiveWords = ref(meta.sensitiveWords.join('\n'));
 const prohibitedWords = ref(meta.prohibitedWords.join('\n'));
 const prohibitedWordsForNameOfUser = ref(meta.prohibitedWordsForNameOfUser.join('\n'));

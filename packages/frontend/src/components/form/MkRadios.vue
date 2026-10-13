@@ -163,7 +163,7 @@ function toggle(o: MkRadiosOption): void {
 	&.checked {
 		background-color: var(--MI_THEME-accentedBg);
 		border-color: var(--MI_THEME-accentedBg);
-		color: var(--MI_THEME-accent);
+		color: var(--MI_THEME-navActive);
 		cursor: default;
 
 		.optionButton {
@@ -177,7 +177,7 @@ function toggle(o: MkRadiosOption): void {
 		}
 
 		.optionCaption {
-			color: color(from var(--MI_THEME-accent) srgb r g b / 0.75);
+			color: color-mix(in srgb, var(--MI_THEME-navActive) 85%, transparent);
 		}
 	}
 }

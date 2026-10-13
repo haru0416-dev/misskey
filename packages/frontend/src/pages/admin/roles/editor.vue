@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<template #label>{{ i18n.ts._role.description }}</template>
 	</MkTextarea>
 
-	<MkColorInput v-model="role.color">
+	<MkColorInput v-model="role.color" clearable>
 		<template #label>{{ i18n.ts.color }}</template>
 	</MkColorInput>
 

@@ -104,6 +104,10 @@ const normalizedSeries = computed(() =>
 );
 const visibleSeries = computed(() => normalizedSeries.value.filter((series) => !series.hidden));
 const hasData = computed(() => visibleSeries.value.some((series) => series.data.length > 0));
+// 件数だけのグラフで縦軸が 0.2 刻みにならないよう、値がすべて整数なら目盛りを 1 以上の間隔にする
+const integerOnly = computed(() =>
+	normalizedSeries.value.every((series) => series.data.every((point) => point.y == null || Number.isInteger(point.y))),
+);
 const seriesColors = computed(() =>
 	normalizedSeries.value.map((series, index) => series.color ?? palette.value[index % palette.value.length]),
 );
@@ -157,7 +161,7 @@ function render() {
 		aria: { enabled: true, description: props.ariaLabel },
 		textStyle: { color: fg, fontFamily: 'inherit' },
 		// ズームはドラッグとホイールだけでスライダーを出さないので、下は軸ラベルの高さだけ空ける
-		grid: { left: props.detailed ? 48 : 8, right: 12, top: 20, bottom: props.detailed ? 32 : 20, containLabel: false },
+		grid: { left: 48, right: 12, top: 20, bottom: props.detailed ? 32 : 20, containLabel: false },
 		legend: { show: false },
 		tooltip: {
 			trigger: 'axis',
@@ -168,14 +172,22 @@ function render() {
 		},
 		xAxis: {
 			type: props.xAxisType,
-			axisLabel: { show: props.detailed, color: fg, hideOverlap: true },
+			// 時間軸の既定は月を英語の略称 (Sep など) で出すので、数字だけの形にそろえる
+			axisLabel: {
+				show: props.detailed,
+				color: fg,
+				hideOverlap: true,
+				formatter: props.xAxisType === 'time' ? { year: '{yyyy}', month: '{yyyy}/{M}', day: '{M}/{d}', hour: '{HH}:{mm}', minute: '{HH}:{mm}', second: '{HH}:{mm}:{ss}' } : undefined,
+			},
 			axisLine: { lineStyle: { color: divider } },
 			axisTick: { show: false },
 			splitLine: { show: false },
 		},
 		yAxis: {
 			type: 'value',
-			axisLabel: { show: props.detailed, color: fg, formatter: (value: number) => formatValue(value) },
+			minInterval: integerOnly.value && !props.bytes ? 1 : undefined,
+			// 目盛りの値が無いと線の高さが何件かを読めないので、簡易表示でも縦軸の値は出す
+			axisLabel: { color: fg, formatter: (value: number) => formatValue(value) },
 			axisLine: { show: false },
 			axisTick: { show: false },
 			splitLine: { lineStyle: { color: divider } },
@@ -251,7 +263,7 @@ onBeforeUnmount(() => {
 .legendButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 9px; border: 1px solid var(--MI_THEME-divider); border-radius: 999px; color: var(--MI_THEME-fg); background: var(--MI_THEME-panel); font: inherit; font-size: 0.82em; cursor: pointer; }
 .legendButton:hover, .legendButton:focus-visible { border-color: var(--MI_THEME-accent); }
 .legendButtonHidden { opacity: 0.48; text-decoration: line-through; }
-.empty { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--MI_THEME-fg); opacity: 0.65; }
+.empty { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 8px; color: var(--MI-text-muted); }
 .empty > i { font-size: 2em; }
 .chart { width: 100%; min-height: 180px; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--MI_THEME-panel) 75%, transparent); cursor: wait; }

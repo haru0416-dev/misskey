@@ -8,6 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkFolder>
 		<template #icon><SearchIcon><i class="ti ti-checkbox"></i></SearchIcon></template>
 		<template #label><SearchLabel>{{ i18n.ts.serverRules }}</SearchLabel></template>
+		<template #suffix>{{ serverRules.length === 0 ? i18n.ts.notSet : i18n.tsx._controlPanel.itemCount({ n: serverRules.length }) }}</template>
 
 		<div class="_gaps_m">
 			<div><SearchText>{{ i18n.ts._serverRules.description }}</SearchText></div>

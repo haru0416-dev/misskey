@@ -79,10 +79,11 @@ const {
 	def: sortDef,
 } = useMkSelect({
 	items: [
-		{ label: `${i18n.ts.createdAt} (${i18n.ts.ascendingOrder})`, value: '+createdAt' },
-		{ label: `${i18n.ts.createdAt} (${i18n.ts.descendingOrder})`, value: '-createdAt' },
-		{ label: `${i18n.ts.usedAt} (${i18n.ts.ascendingOrder})`, value: '+usedAt' },
-		{ label: `${i18n.ts.usedAt} (${i18n.ts.descendingOrder})`, value: '-usedAt' },
+		// '+' は新しい順 (降順)、'-' は古い順 (昇順)。backend の registration-ticket-store.ts の並びと合わせる
+		{ label: `${i18n.ts.createdAt} (${i18n.ts.descendingOrder})`, value: '+createdAt' },
+		{ label: `${i18n.ts.createdAt} (${i18n.ts.ascendingOrder})`, value: '-createdAt' },
+		{ label: `${i18n.ts.usedAt} (${i18n.ts.descendingOrder})`, value: '+usedAt' },
+		{ label: `${i18n.ts.usedAt} (${i18n.ts.ascendingOrder})`, value: '-usedAt' },
 	],
 	initialValue: '+createdAt',
 });

@@ -15,17 +15,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 import MkHeatmap from '@/features/chart/components/MkHeatmap.vue';
 import MkSelect from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
+import { i18n } from '@/i18n.js';
 
 const {
 	model: src,
 	def: srcDef,
 } = useMkSelect({
 	items: [
-		{ label: 'Active users', value: 'active-users' },
-		{ label: 'Notes', value: 'notes' },
-		{ label: 'AP Requests: inboxReceived', value: 'ap-requests-inbox-received' },
-		{ label: 'AP Requests: deliverSucceeded', value: 'ap-requests-deliver-succeeded' },
-		{ label: 'AP Requests: deliverFailed', value: 'ap-requests-deliver-failed' },
+		{ label: i18n.ts._charts.activeUsers, value: 'active-users' },
+		{ label: i18n.ts.notes, value: 'notes' },
+		{ label: `${i18n.ts._controlPanel.apRequests}: ${i18n.ts._chart.incoming}`, value: 'ap-requests-inbox-received' },
+		{ label: `${i18n.ts._controlPanel.apRequests}: ${i18n.ts._chart.outgoingSucceeded}`, value: 'ap-requests-deliver-succeeded' },
+		{ label: `${i18n.ts._controlPanel.apRequests}: ${i18n.ts._chart.outgoingFailed}`, value: 'ap-requests-deliver-failed' },
 	],
 	initialValue: 'active-users',
 });

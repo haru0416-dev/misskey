@@ -45,6 +45,10 @@ function render() {
 	if (chartEl.value == null) {
 		return;
 	}
+	// 閉じた節や表示されていないページの中では大きさが 0 になる。その間は作らず、大きさが付いたときに作る。
+	if (chart == null && (chartEl.value.clientWidth === 0 || chartEl.value.clientHeight === 0)) {
+		return;
+	}
 	chart ??= init(chartEl.value, undefined, { renderer: 'svg' });
 	chart.setOption(
 		{
@@ -81,7 +85,13 @@ watch(
 onMounted(() => {
 	render();
 	if (chartEl.value) {
-		observer = new ResizeObserver(() => chart?.resize());
+		observer = new ResizeObserver(() => {
+			if (chart == null) {
+				render();
+			} else {
+				chart.resize();
+			}
+		});
 		observer.observe(chartEl.value);
 	}
 });

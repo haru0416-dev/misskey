@@ -1804,6 +1804,10 @@ export interface Locale extends ILocale {
      */
     "close": string;
     /**
+     * 開く
+     */
+    "open": string;
+    /**
      * 招待
      */
     "invites": string;
@@ -11998,6 +12002,346 @@ export interface Locale extends ILocale {
          * MFM
          */
         "mfm": string;
+    };
+    "_controlPanel": {
+        /**
+         * 活動のヒートマップ
+         */
+        "activityHeatmap": string;
+        /**
+         * ActivityPub のリクエスト
+         */
+        "apRequests": string;
+        /**
+         * 新規ユーザー
+         */
+        "newUsers": string;
+        /**
+         * 配送キュー
+         */
+        "deliverQueue": string;
+        /**
+         * 受信キュー
+         */
+        "inboxQueue": string;
+        /**
+         * ユーザーID
+         */
+        "userId": string;
+        /**
+         * ファイルの種類 (MIME タイプ)
+         */
+        "mimeType": string;
+        /**
+         * 選択モード
+         */
+        "selectMode": string;
+        /**
+         * カスタム絵文字 (表で一括編集)
+         */
+        "customEmojisGrid": string;
+        /**
+         * シンプル
+         */
+        "entrancePageSimple": string;
+        /**
+         * {n} 件
+         */
+        "itemCount": ParameterizedString<"n">;
+        /**
+         * システム Webhook
+         */
+        "systemWebhook": string;
+        /**
+         * プッシュ通知 (Service Worker)
+         */
+        "serviceWorker": string;
+        /**
+         * 公開鍵
+         */
+        "vapidPublicKey": string;
+        /**
+         * 秘密鍵
+         */
+        "vapidPrivateKey": string;
+        /**
+         * アクセスキー
+         */
+        "accessKey": string;
+        /**
+         * シークレットキー
+         */
+        "secretKey": string;
+        /**
+         * パス形式の URL を使う (s3ForcePathStyle)
+         */
+        "s3ForcePathStyle": string;
+        /**
+         * 測定 ID
+         */
+        "measurementId": string;
+        /**
+         * 形
+         */
+        "adForm": string;
+        /**
+         * メールアドレスの実在確認
+         */
+        "activeEmailValidation": string;
+        /**
+         * Verifymail.io の API を使う
+         */
+        "useVerifymailApi": string;
+        /**
+         * Verifymail.io の API キー
+         */
+        "verifymailApiKey": string;
+        /**
+         * TrueMail の API を使う
+         */
+        "useTruemailApi": string;
+        /**
+         * TrueMail の API の URL
+         */
+        "truemailInstance": string;
+        /**
+         * TrueMail の API キー
+         */
+        "truemailApiKey": string;
+        /**
+         * 登録に使えないメールドメイン
+         */
+        "bannedEmailDomains": string;
+        /**
+         * ドメイン (1 行に 1 つ)
+         */
+        "bannedEmailDomainsList": string;
+        /**
+         * IP アドレスを記録する
+         */
+        "logIpAddress": string;
+        /**
+         * ファンアウトタイムライン (FTT)
+         */
+        "fanoutTimeline": string;
+        /**
+         * リモートのノートの定期削除
+         */
+        "remoteNotesCleaning": string;
+        /**
+         * ローカルユーザーのユーザータイムラインに保持する件数
+         */
+        "perLocalUserUserTimelineCacheMax": string;
+        /**
+         * リモートユーザーのユーザータイムラインに保持する件数
+         */
+        "perRemoteUserUserTimelineCacheMax": string;
+        /**
+         * ユーザーごとのホームタイムラインに保持する件数
+         */
+        "perUserHomeTimelineCacheMax": string;
+        /**
+         * リストのタイムラインに保持する件数
+         */
+        "perUserListTimelineCacheMax": string;
+        /**
+         * オフにすると、CPU・メモリ・ディスクの使用状況を集めず、サーバー情報にも出しません。
+         */
+        "perfServerMachineStats": string;
+        /**
+         * オフにすると、アイコンを設定していないユーザーのアイコンを生成せず、共通の画像を使います。
+         */
+        "perfIdenticon": string;
+        /**
+         * オフにすると、リモートユーザーのノート・リアクションなどをユーザーごとのチャートに数えません。
+         */
+        "perfChartsForRemoteUser": string;
+        /**
+         * オフにすると、受信や配送のときに知らないリモートサーバーを新しく登録せず、サーバーごとのノート数も数えません。
+         */
+        "perfStatsForFederatedInstances": string;
+        /**
+         * オフにすると、リモートサーバーごとのチャート (配送・ノート・ファイルなど) を集計しません。
+         */
+        "perfChartsForFederatedInstances": string;
+        /**
+         * オフにすると、リモートユーザーのプロフィールでロールのバッジを調べず、表示もしません。
+         */
+        "perfRoleBadgesOfRemoteUsers": string;
+    };
+    "_jobQueue": {
+        /**
+         * すべて
+         */
+        "all": string;
+        /**
+         * 最新
+         */
+        "latest": string;
+        /**
+         * 未配送 (outbox)
+         */
+        "outboxPending": string;
+        /**
+         * 最も古い未配送
+         */
+        "outboxOldestPending": string;
+        /**
+         * 接続中のクライアント
+         */
+        "clientsConnected": string;
+        /**
+         * 待ちで止まっているクライアント
+         */
+        "clientsBlocked": string;
+        /**
+         * メモリ (最大)
+         */
+        "memoryPeak": string;
+        /**
+         * メモリ (全体)
+         */
+        "memoryTotal": string;
+        /**
+         * メモリ (使用中)
+         */
+        "memoryUsed": string;
+        /**
+         * 稼働時間
+         */
+        "uptime": string;
+        /**
+         * 表示を更新
+         */
+        "refreshView": string;
+        /**
+         * ジョブを削除
+         */
+        "removeJobs": string;
+        /**
+         * 遅延中のジョブをすべて今すぐ実行
+         */
+        "promoteAllJobs": string;
+        /**
+         * 今すぐ実行
+         */
+        "promote": string;
+        /**
+         * キューを再開
+         */
+        "resumeQueue": string;
+        /**
+         * キューを一時停止
+         */
+        "pauseQueue": string;
+        /**
+         * キューを空にする
+         */
+        "emptyQueue": string;
+        /**
+         * 情報
+         */
+        "info": string;
+        /**
+         * 経過
+         */
+        "timeline": string;
+        /**
+         * データ
+         */
+        "data": string;
+        /**
+         * データ (編集)
+         */
+        "dataEdit": string;
+        /**
+         * 結果
+         */
+        "result": string;
+        /**
+         * エラー
+         */
+        "error": string;
+        /**
+         * ログ
+         */
+        "logs": string;
+        /**
+         * 作成
+         */
+        "createdAt": string;
+        /**
+         * 処理開始
+         */
+        "processedAt": string;
+        /**
+         * 終了
+         */
+        "finishedAt": string;
+        /**
+         * 更新
+         */
+        "updatedAt": string;
+        /**
+         * 所要時間
+         */
+        "spent": string;
+        /**
+         * 失敗の理由
+         */
+        "failedReason": string;
+        /**
+         * 試行回数
+         */
+        "attempts": string;
+        /**
+         * 進み具合
+         */
+        "progress": string;
+        /**
+         * 元のデータをコピー
+         */
+        "copyRaw": string;
+        /**
+         * ログを読み込む
+         */
+        "loadLogs": string;
+        /**
+         * キュー
+         */
+        "queue": string;
+        /**
+         * ジョブ名
+         */
+        "jobName": string;
+        /**
+         * 理由
+         */
+        "reason": string;
+        /**
+         * 担当プロセス
+         */
+        "coordinator": string;
+        /**
+         * 外部のジョブ ID
+         */
+        "externalJobId": string;
+        /**
+         * リビジョン
+         */
+        "revision": string;
+        /**
+         * 破棄
+         */
+        "abandon": string;
+        /**
+         * エラーが出ているサーバー
+         */
+        "erroredInstances": string;
+        /**
+         * {n} 件
+         */
+        "jobCount": ParameterizedString<"n">;
     };
     "_databaseStats": {
         /**

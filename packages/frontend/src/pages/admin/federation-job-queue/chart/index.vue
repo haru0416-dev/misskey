@@ -5,43 +5,37 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div class="_gaps">
-	<div :class="$style.status">
-		<div :class="$style.statusItem" class="_panel"><div :class="$style.statusLabel">Process</div>{{ number(activeSincePrevTick) }}</div>
-		<div :class="$style.statusItem" class="_panel"><div :class="$style.statusLabel">Active</div>{{ number(active) }}</div>
-		<div :class="$style.statusItem" class="_panel"><div :class="$style.statusLabel">Waiting</div>{{ number(waiting) }}</div>
-		<div :class="$style.statusItem" class="_panel"><div :class="$style.statusLabel">Delayed</div>{{ number(delayed) }}</div>
-	</div>
 	<div :class="$style.charts">
 		<div :class="$style.chart">
-			<div :class="$style.chartTitle">Process</div>
+			<div :class="$style.chartTitle">{{ i18n.ts._chart.process }}<span :class="$style.current">{{ number(activeSincePrevTick) }}</span></div>
 			<XChart ref="chartProcess" type="process"/>
 		</div>
 		<div :class="$style.chart">
-			<div :class="$style.chartTitle">Active</div>
+			<div :class="$style.chartTitle">{{ i18n.ts._chart.active }}<span :class="$style.current">{{ number(active) }}</span></div>
 			<XChart ref="chartActive" type="active"/>
 		</div>
 		<div :class="$style.chart">
-			<div :class="$style.chartTitle">Delayed</div>
+			<div :class="$style.chartTitle">{{ i18n.ts._chart.delayed }}<span :class="$style.current">{{ number(delayed) }}</span></div>
 			<XChart ref="chartDelayed" type="delayed"/>
 		</div>
 		<div :class="$style.chart">
-			<div :class="$style.chartTitle">Waiting</div>
+			<div :class="$style.chartTitle">{{ i18n.ts._chart.waiting }}<span :class="$style.current">{{ number(waiting) }}</span></div>
 			<XChart ref="chartWaiting" type="waiting"/>
 		</div>
 	</div>
 	<MkFolder :defaultOpen="true" :max-height="250">
 		<template #icon><i class="ti ti-alert-triangle"></i></template>
-		<template #label>Errored instances</template>
-		<template #suffix>({{ number(jobs.reduce((a, b) => a + b[1], 0)) }} jobs)</template>
+		<template #label>{{ i18n.ts._jobQueue.erroredInstances }}</template>
+		<template #suffix>{{ i18n.tsx._jobQueue.jobCount({ n: number(jobs.reduce((a, b) => a + b[1], 0)) }) }}</template>
 
 		<div>
 			<div v-if="jobs.length > 0">
 				<div v-for="job in jobs" :key="job[0]">
 					<MkA :to="`/instance-info/${job[0]}`" behavior="window">{{ job[0] }}</MkA>
-					<span style="margin-left: 8px; opacity: 0.7;">({{ number(job[1]) }} jobs)</span>
+					<span style="margin-left: 8px; color: var(--MI-text-muted);">{{ i18n.tsx._jobQueue.jobCount({ n: number(job[1]) }) }}</span>
 				</div>
 			</div>
-			<span v-else style="opacity: 0.5;">{{ i18n.ts.noJobs }}</span>
+			<span v-else style="color: var(--MI-text-muted);">{{ i18n.ts.noJobs }}</span>
 		</div>
 	</MkFolder>
 </div>
@@ -157,21 +151,15 @@ onUnmounted(() => {
 }
 
 .chartTitle {
+	display: flex;
+	align-items: baseline;
 	margin-bottom: 8px;
 }
 
-.status {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-	gap: 10px;
-}
-
-.statusItem {
-	padding: 12px 16px;
-}
-
-.statusLabel {
-	font-size: 80%;
-	opacity: 0.6;
+.current {
+	margin-left: auto;
+	font-size: 1.2em;
+	font-weight: bold;
+	font-variant-numeric: tabular-nums;
 }
 </style>

@@ -5,29 +5,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <div :class="$style.root">
-	<div class="_table status">
-		<div class="_row">
-			<div class="_cell" style="text-align: center;"><div class="_label">Process</div>{{ number(activeSincePrevTick) }}</div>
-			<div class="_cell" style="text-align: center;"><div class="_label">Active</div>{{ number(active) }}</div>
-			<div class="_cell" style="text-align: center;"><div class="_label">Waiting</div>{{ number(waiting) }}</div>
-			<div class="_cell" style="text-align: center;"><div class="_label">Delayed</div>{{ number(delayed) }}</div>
-		</div>
-	</div>
 	<div class="charts">
 		<div class="chart">
-			<div class="title">Process</div>
+			<div class="title">{{ i18n.ts._chart.process }}<span class="current">{{ number(activeSincePrevTick) }}</span></div>
 			<XChart ref="chartProcess" type="process"/>
 		</div>
 		<div class="chart">
-			<div class="title">Active</div>
+			<div class="title">{{ i18n.ts._chart.active }}<span class="current">{{ number(active) }}</span></div>
 			<XChart ref="chartActive" type="active"/>
 		</div>
 		<div class="chart">
-			<div class="title">Delayed</div>
+			<div class="title">{{ i18n.ts._chart.delayed }}<span class="current">{{ number(delayed) }}</span></div>
 			<XChart ref="chartDelayed" type="delayed"/>
 		</div>
 		<div class="chart">
-			<div class="title">Waiting</div>
+			<div class="title">{{ i18n.ts._chart.waiting }}<span class="current">{{ number(waiting) }}</span></div>
 			<XChart ref="chartWaiting" type="waiting"/>
 		</div>
 	</div>
@@ -40,6 +32,7 @@ import * as Misskey from 'misskey-js';
 import XChart from './chart.vue';
 import type { ApQueueDomain } from '@/pages/admin/federation-job-queue/index.vue';
 import number from '@/filters/number.js';
+import { i18n } from '@/i18n.js';
 import { useStream } from '@/stream.js';
 import { genId } from '@/utility/id.js';
 
@@ -108,10 +101,6 @@ onUnmounted(() => {
 <style lang="scss" module>
 .root {
 	&:global {
-		> .status {
-			padding: 0 0 16px 0;
-		}
-
 		> .charts {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
@@ -124,7 +113,16 @@ onUnmounted(() => {
 				border-radius: var(--MI-radius);
 
 				> .title {
+					display: flex;
+					align-items: baseline;
 					font-size: 0.85em;
+
+					> .current {
+						margin-left: auto;
+						font-size: 1.4em;
+						font-weight: bold;
+						font-variant-numeric: tabular-nums;
+					}
 				}
 			}
 		}

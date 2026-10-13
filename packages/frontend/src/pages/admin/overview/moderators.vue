@@ -8,6 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<Transition :name="prefer.animation ? '_transition_zoom' : ''" mode="out-in">
 		<MkLoading v-if="fetching"/>
 		<MkError v-else-if="fetchError" @retry="fetchModerators()"/>
+		<MkResult v-else-if="moderators == null || moderators.length === 0" type="empty" class="_panel"/>
 		<div v-else :class="$style.root" class="_panel">
 			<MkA v-for="user in moderators" :key="user.id" class="user" :to="`/admin/user/${user.id}`">
 				<MkAvatar :user="user" class="avatar" indicator/>

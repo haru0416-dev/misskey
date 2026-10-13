@@ -28,13 +28,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div class="_gaps_s">
 				<MkFoldableSection>
 					<template #header>{{ i18n.ts._role.manualRoles }}</template>
-					<div class="_gaps_s">
+					<MkResult v-if="manualRoles.length === 0" type="empty"/>
+					<div v-else class="_gaps_s">
 						<MkRolePreview v-for="role in manualRoles" :key="role.id" :role="role" :forModeration="true"/>
 					</div>
 				</MkFoldableSection>
 				<MkFoldableSection>
 					<template #header>{{ i18n.ts._role.conditionalRoles }}</template>
-					<div class="_gaps_s">
+					<MkResult v-if="conditionalRoles.length === 0" type="empty"/>
+					<div v-else class="_gaps_s">
 						<MkRolePreview v-for="role in conditionalRoles" :key="role.id" :role="role" :forModeration="true"/>
 					</div>
 				</MkFoldableSection>

@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						{ value: 'horizontal-big' },
 					]"
 				>
-					<template #label>Form</template>
+					<template #label>{{ i18n.ts._controlPanel.adForm }}</template>
 				</MkRadios>
 
 				<FormSplit>

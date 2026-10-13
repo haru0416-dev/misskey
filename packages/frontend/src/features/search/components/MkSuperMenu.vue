@@ -282,7 +282,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 				}
 
 				&.active {
-					color: var(--MI_THEME-accent);
+					color: var(--MI_THEME-navActive);
 					background: var(--MI_THEME-accentedBg);
 				}
 
@@ -395,7 +395,7 @@ function searchOnKeyDown(ev: KeyboardEvent) {
 		}
 
 		&.active {
-			color: var(--MI_THEME-accent);
+			color: var(--MI_THEME-navActive);
 			background: var(--MI_THEME-accentedBg);
 		}
 

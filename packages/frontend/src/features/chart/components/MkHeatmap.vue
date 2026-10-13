@@ -107,7 +107,8 @@ onMounted(load);
 <style lang="scss" module>
 .scroller { overflow-x: auto; padding: 4px; }
 .grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); grid-auto-columns: 12px; gap: 4px; min-width: calc(var(--weeks) * 16px); width: max-content; }
-.cell { border-radius: 3px; background: color-mix(in srgb, var(--MI_THEME-accent) calc(var(--level) * 100%), var(--MI_THEME-panel)); outline-offset: 2px; }
+/* 値が 0 のマスも枠と見分けられるよう、文字色を 10% 混ぜた色から accent へ寄せる */
+.cell { border-radius: 3px; background: color-mix(in srgb, var(--MI_THEME-accent) calc(var(--level) * 100%), color-mix(in srgb, var(--MI_THEME-fg) 10%, var(--MI_THEME-panel))); outline-offset: 2px; }
 .cell:focus-visible { outline: 2px solid var(--MI_THEME-accent); }
-.empty { min-height: 120px; display: grid; place-items: center; color: var(--MI_THEME-fg); opacity: 0.65; }
+.empty { min-height: 120px; display: grid; place-items: center; color: var(--MI-text-muted); }
 </style>

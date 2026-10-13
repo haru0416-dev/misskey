@@ -12,8 +12,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<MkRadios
 						v-model="entrancePageStyle"
 						:options="[
-							{ value: 'classic' },
-							{ value: 'simple' },
+							{ value: 'classic', label: i18n.ts.classic },
+							{ value: 'simple', label: i18n.ts._controlPanel.entrancePageSimple },
 						]"
 					>
 						<template #label><SearchLabel>{{ i18n.ts._serverSettings.entrancePageStyle }}</SearchLabel></template>
@@ -101,7 +101,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</SearchMarker>
 
 				<SearchMarker :keywords="['theme', 'color']">
-					<MkColorInput v-model="themeColor">
+					<MkColorInput v-model="themeColor" clearable>
 						<template #label><SearchLabel>{{ i18n.ts.themeColor }}</SearchLabel></template>
 					</MkColorInput>
 				</SearchMarker>

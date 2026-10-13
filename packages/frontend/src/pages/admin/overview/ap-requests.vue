@@ -31,6 +31,11 @@ const fetchError = ref(false);
 const incoming = ref<DataChartSeries[]>([]);
 const outgoing = ref<DataChartSeries[]>([]);
 
+// 系列の並び順の色だと失敗が緑になるので、成否はテーマの success / error で塗る
+function themeColor(name: string): string {
+	return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 async function fetchChart() {
 	fetching.value = true;
 	fetchError.value = false;
@@ -43,8 +48,8 @@ async function fetchChart() {
 	}
 	incoming.value = [{ name: chartText('incoming'), type: 'bar', data: toChartSeries(now, raw.inboxReceived) }];
 	outgoing.value = [
-		{ name: chartText('outgoingSucceeded'), type: 'area', data: toChartSeries(now, raw.deliverSucceeded) },
-		{ name: chartText('outgoingFailed'), type: 'area', data: toChartSeries(now, raw.deliverFailed) },
+		{ name: chartText('outgoingSucceeded'), type: 'area', data: toChartSeries(now, raw.deliverSucceeded), color: themeColor('--MI_THEME-success') },
+		{ name: chartText('outgoingFailed'), type: 'area', data: toChartSeries(now, raw.deliverFailed), color: themeColor('--MI_THEME-error') },
 	];
 	fetching.value = false;
 }

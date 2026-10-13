@@ -20,24 +20,24 @@ SPDX-License-Identifier: AGPL-3.0-only
 			v-model:tab="tab"
 			:tabs="[{
 					key: 'info',
-					title: 'Info',
+					title: i18n.ts._jobQueue.info,
 					icon: 'ti ti-info-circle',
 				}, {
 					key: 'data',
-					title: 'Data',
+					title: i18n.ts._jobQueue.data,
 					icon: 'ti ti-package',
 				}, ...(deadLetter.lastError != null ? [{
 					key: 'error',
-					title: 'Error',
+					title: i18n.ts._jobQueue.error,
 					icon: 'ti ti-alert-triangle',
 				}] : [])]"
 		/>
 	</template>
 	<template #footer>
 		<div class="_buttons">
-			<MkButton rounded @click="copyRaw()"><i class="ti ti-copy"></i> Copy raw</MkButton>
-			<MkButton primary rounded @click="retry()"><i class="ti ti-reload"></i> Retry</MkButton>
-			<MkButton danger rounded style="margin-left: auto;" @click="abandon()"><i class="ti ti-trash"></i> Abandon</MkButton>
+			<MkButton rounded @click="copyRaw()"><i class="ti ti-copy"></i> {{ i18n.ts._jobQueue.copyRaw }}</MkButton>
+			<MkButton primary rounded @click="retry()"><i class="ti ti-reload"></i> {{ i18n.ts.retry }}</MkButton>
+			<MkButton danger rounded style="margin-left: auto;" @click="abandon()"><i class="ti ti-trash"></i> {{ i18n.ts._jobQueue.abandon }}</MkButton>
 		</div>
 	</template>
 
@@ -48,40 +48,40 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #value>{{ deadLetter.id }}</template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Queue</template>
+				<template #key>{{ i18n.ts._jobQueue.queue }}</template>
 				<template #value>{{ deadLetter.queue }}</template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Job name</template>
+				<template #key>{{ i18n.ts._jobQueue.jobName }}</template>
 				<template #value>{{ deadLetter.name }}</template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Reason</template>
+				<template #key>{{ i18n.ts._jobQueue.reason }}</template>
 				<template #value><i style="color: var(--MI_THEME-error);" class="ti ti-alert-triangle"></i> {{ deadLetter.deadLetterReason }}</template>
 			</MkKeyValue>
 			<MkKeyValue v-if="deadLetter.coordinatorId != null">
-				<template #key>Coordinator</template>
+				<template #key>{{ i18n.ts._jobQueue.coordinator }}</template>
 				<template #value>{{ deadLetter.coordinatorId }}</template>
 			</MkKeyValue>
 			<MkKeyValue v-if="deadLetter.externalJobId != null">
-				<template #key>External job ID</template>
+				<template #key>{{ i18n.ts._jobQueue.externalJobId }}</template>
 				<template #value>{{ deadLetter.externalJobId }}</template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Revision</template>
+				<template #key>{{ i18n.ts._jobQueue.revision }}</template>
 				<template #value>{{ deadLetter.revision }}</template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Created at</template>
+				<template #key>{{ i18n.ts._jobQueue.createdAt }}</template>
 				<template #value><MkTime :time="deadLetter.createdAt" mode="detail"/></template>
 			</MkKeyValue>
 			<MkKeyValue>
-				<template #key>Updated at</template>
+				<template #key>{{ i18n.ts._jobQueue.updatedAt }}</template>
 				<template #value><MkTime :time="deadLetter.updatedAt" mode="detail"/></template>
 			</MkKeyValue>
 		</div>
 		<MkFolder :withSpacer="false">
-			<template #label>Options</template>
+			<template #label>{{ i18n.ts.options }}</template>
 			<MkCode :code="JSON5.stringify(deadLetter.opts, null, '\t')" lang="js"/>
 		</MkFolder>
 	</div>

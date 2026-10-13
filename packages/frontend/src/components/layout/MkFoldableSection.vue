@@ -8,7 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<header :class="$style.header" class="_button" @click="showBody = !showBody">
 		<div :class="$style.title"><div><slot name="header"></slot></div></div>
 		<div :class="$style.divider"></div>
-		<button class="_button" :class="$style.button">
+		<button class="_button" :class="$style.button" :aria-expanded="showBody" :aria-label="showBody ? i18n.ts.close : i18n.ts.open">
 			<template v-if="showBody"><i class="ti ti-chevron-up"></i></template>
 			<template v-else><i class="ti ti-chevron-down"></i></template>
 		</button>
@@ -34,6 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { miLocalStorage } from '@/local-storage.js';
 import { prefer } from '@/preferences.js';
+import { i18n } from '@/i18n.js';
 import { themeManager } from '@/theme.js';
 import { getBgColor } from '@/utility/get-bg-color.js';
 import { useHeightTransition } from '@/composables/useHeightTransition.js';

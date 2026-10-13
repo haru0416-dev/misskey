@@ -7,14 +7,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkFolder>
 		<template #label><slot name="label"></slot></template>
 		<template #suffix>
-			<template v-if="isBaseRole">
-				<span><slot name="valueText"></slot></span>
-			</template>
-			<template v-else-if="policyMeta != null">
-				<span v-if="policyMeta.useDefault" :class="$style.useDefaultLabel">{{ i18n.ts._role.useBaseValue }}</span>
-				<span v-else><slot name="valueText"></slot></span>
-				<span :class="$style.priorityIndicator"><i :class="getPriorityIcon(policyMeta.priority)"></i></span>
-			</template>
+			<span :class="$style.suffix">
+				<template v-if="isBaseRole">
+					<span :class="$style.value"><slot name="valueText"></slot></span>
+				</template>
+				<template v-else-if="policyMeta != null">
+					<span v-if="policyMeta.useDefault" :class="[$style.value, $style.useDefaultLabel]">{{ i18n.ts._role.useBaseValue }}</span>
+					<span v-else :class="$style.value"><slot name="valueText"></slot></span>
+					<span :class="$style.priorityIndicator"><i :class="getPriorityIcon(policyMeta.priority)"></i></span>
+				</template>
+			</span>
 		</template>
 		<div class="_gaps">
 			<MkSwitch v-if="!isBaseRole && policyMeta != null" v-model="useDefaultModel" :disabled="readonly">
@@ -101,11 +103,25 @@ function priroityRangeTextConverter(v: number): string {
 </script>
 
 <style lang="scss" module>
+/* 幅が足りないときは値の文字だけを省略し、優先度のアイコンは残す */
+.suffix {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.value {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .useDefaultLabel {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 }
 
 .priorityIndicator {
+	flex-shrink: 0;
 	margin-left: 8px;
 }
 </style>

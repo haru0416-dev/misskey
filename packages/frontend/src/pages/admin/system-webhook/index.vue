@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <PageWithHeader :actions="headerActions" :tabs="headerTabs">
 	<div class="_spacer" style="--MI_SPACER-w: 900px;">
-		<SearchMarker path="/admin/system-webhook" label="SystemWebhook" :keywords="['webhook']" icon="ti ti-webhook">
+		<SearchMarker path="/admin/system-webhook" :label="i18n.ts._controlPanel.systemWebhook" :keywords="['webhook']" icon="ti ti-webhook">
 			<div class="_gaps_m">
 				<SearchMarker>
 					<MkButton primary @click="onCreateWebhookClicked">
@@ -82,7 +82,7 @@ onMounted(async () => {
 });
 
 definePage(() => ({
-	title: 'SystemWebhook',
+	title: i18n.ts._controlPanel.systemWebhook,
 	icon: 'ti ti-webhook',
 }));
 </script>

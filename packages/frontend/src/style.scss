@@ -443,8 +443,8 @@ rt {
 }
 
 ._beta {
-	color: var(--MI_THEME-accent);
-	border: solid 1px var(--MI_THEME-accent);
+	color: var(--MI_THEME-navActive);
+	border: solid 1px var(--MI_THEME-navActive);
 }
 
 ._modified {
@@ -469,7 +469,7 @@ rt {
 
 			> ._label {
 				font-size: 80%;
-				opacity: 0.7;
+				color: var(--MI-text-muted);
 
 				> ._icon {
 					margin-right: 4px;
@@ -484,13 +484,27 @@ rt {
 	color: var(--MI_THEME-link);
 }
 
+/*
+ * 行送りを変えずに押せる範囲を上下 5px ずつ広げる。小さい文字 (12.6px) の行は 16px なので 26px になる。
+ * 上下の行にほかのリンクがあると端の数 px を奪うので、周りに押せる要素が無い単独のリンクにだけ付ける。
+ */
+._hitArea {
+	position: relative;
+
+	&::before {
+		content: "";
+		position: absolute;
+		inset: -5px -2px;
+	}
+}
+
 ._love {
 	color: var(--MI_THEME-love);
 }
 
 ._caption {
 	font-size: 0.8em;
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 }
 
 ._monospace {

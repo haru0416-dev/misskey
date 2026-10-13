@@ -35,8 +35,8 @@ const headerTabs = computed(() => [{
 }]);
 
 definePage(computed(() => ({
-	title: i18n.ts.customEmojis,
-	icon: 'ti ti-icons',
+	title: i18n.ts._controlPanel.customEmojisGrid,
+	icon: 'ti ti-table',
 	needWideArea: true,
 })));
 </script>

@@ -12,7 +12,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="enableServerMachineStats" @change="onChange_enableServerMachineStats">
 							<template #label><SearchLabel>{{ i18n.ts.enableServerMachineStats }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfServerMachineStats }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="enableIdenticonGeneration" @change="onChange_enableIdenticonGeneration">
 							<template #label><SearchLabel>{{ i18n.ts.enableIdenticonGeneration }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfIdenticon }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="enableChartsForRemoteUser" @change="onChange_enableChartsForRemoteUser">
 							<template #label><SearchLabel>{{ i18n.ts.enableChartsForRemoteUser }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfChartsForRemoteUser }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -39,7 +39,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="enableStatsForFederatedInstances" @change="onChange_enableStatsForFederatedInstances">
 							<template #label><SearchLabel>{{ i18n.ts.enableStatsForFederatedInstances }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfStatsForFederatedInstances }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -48,7 +48,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="enableChartsForFederatedInstances" @change="onChange_enableChartsForFederatedInstances">
 							<template #label><SearchLabel>{{ i18n.ts.enableChartsForFederatedInstances }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfChartsForFederatedInstances }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -57,7 +57,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<div class="_panel" style="padding: 16px;">
 						<MkSwitch v-model="showRoleBadgesOfRemoteUsers" @change="onChange_showRoleBadgesOfRemoteUsers">
 							<template #label><SearchLabel>{{ i18n.ts.showRoleBadgesOfRemoteUsers }}</SearchLabel></template>
-							<template #caption>{{ i18n.ts.turnOffToImprovePerformance }}</template>
+							<template #caption>{{ i18n.ts._controlPanel.perfRoleBadgesOfRemoteUsers }}</template>
 						</MkSwitch>
 					</div>
 				</SearchMarker>
@@ -65,9 +65,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<SearchMarker>
 					<MkFolder :defaultOpen="true">
 						<template #icon><SearchIcon><i class="ti ti-bolt"></i></SearchIcon></template>
-						<template #label><SearchLabel>Misskey® Fan-out Timeline Technology™ (FTT)</SearchLabel></template>
-						<template v-if="fttForm.savedState.enableFanoutTimeline" #suffix>Enabled</template>
-						<template v-else #suffix>Disabled</template>
+						<template #label><SearchLabel>{{ i18n.ts._controlPanel.fanoutTimeline }}</SearchLabel></template>
+						<template v-if="fttForm.savedState.enableFanoutTimeline" #suffix>{{ i18n.ts.enabled }}</template>
+						<template v-else #suffix>{{ i18n.ts.disabled }}</template>
 						<template v-if="fttForm.modified.value" #footer>
 							<MkFormFooter :form="fttForm"/>
 						</template>
@@ -78,7 +78,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 									<template #label><SearchLabel>{{ i18n.ts.enable }}</SearchLabel><span v-if="fttForm.modifiedStates.enableFanoutTimeline" class="_modified">{{ i18n.ts.modified }}</span></template>
 									<template #caption>
 										<div><SearchText>{{ i18n.ts._serverSettings.fanoutTimelineDescription }}</SearchText></div>
-										<div><MkLink target="_blank" url="https://misskey-hub.net/docs/for-admin/features/ftt/">{{ i18n.ts.details }}</MkLink></div>
+										<div><MkLink class="_hitArea" target="_blank" url="https://misskey-hub.net/docs/for-admin/features/ftt/">{{ i18n.ts.details }}</MkLink></div>
 									</template>
 								</MkSwitch>
 							</SearchMarker>
@@ -93,25 +93,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 								<SearchMarker>
 									<MkInput v-model="fttForm.state.perLocalUserUserTimelineCacheMax" type="number">
-										<template #label><SearchLabel>perLocalUserUserTimelineCacheMax</SearchLabel><span v-if="fttForm.modifiedStates.perLocalUserUserTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.perLocalUserUserTimelineCacheMax }}</SearchLabel><span v-if="fttForm.modifiedStates.perLocalUserUserTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
 									</MkInput>
 								</SearchMarker>
 
 								<SearchMarker>
 									<MkInput v-model="fttForm.state.perRemoteUserUserTimelineCacheMax" type="number">
-										<template #label><SearchLabel>perRemoteUserUserTimelineCacheMax</SearchLabel><span v-if="fttForm.modifiedStates.perRemoteUserUserTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.perRemoteUserUserTimelineCacheMax }}</SearchLabel><span v-if="fttForm.modifiedStates.perRemoteUserUserTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
 									</MkInput>
 								</SearchMarker>
 
 								<SearchMarker>
 									<MkInput v-model="fttForm.state.perUserHomeTimelineCacheMax" type="number">
-										<template #label><SearchLabel>perUserHomeTimelineCacheMax</SearchLabel><span v-if="fttForm.modifiedStates.perUserHomeTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.perUserHomeTimelineCacheMax }}</SearchLabel><span v-if="fttForm.modifiedStates.perUserHomeTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
 									</MkInput>
 								</SearchMarker>
 
 								<SearchMarker>
 									<MkInput v-model="fttForm.state.perUserListTimelineCacheMax" type="number">
-										<template #label><SearchLabel>perUserListTimelineCacheMax</SearchLabel><span v-if="fttForm.modifiedStates.perUserListTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
+										<template #label><SearchLabel>{{ i18n.ts._controlPanel.perUserListTimelineCacheMax }}</SearchLabel><span v-if="fttForm.modifiedStates.perUserListTimelineCacheMax" class="_modified">{{ i18n.ts.modified }}</span></template>
 									</MkInput>
 								</SearchMarker>
 							</template>
@@ -122,9 +122,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<SearchMarker>
 					<MkFolder :defaultOpen="true">
 						<template #icon><SearchIcon><i class="ti ti-recycle"></i></SearchIcon></template>
-						<template #label><SearchLabel>Remote Notes Cleaning (仮)</SearchLabel></template>
-						<template v-if="remoteNotesCleaningForm.savedState.enableRemoteNotesCleaning" #suffix>Enabled</template>
-						<template v-else #suffix>Disabled</template>
+						<template #label><SearchLabel>{{ i18n.ts._controlPanel.remoteNotesCleaning }}</SearchLabel></template>
+						<template v-if="remoteNotesCleaningForm.savedState.enableRemoteNotesCleaning" #suffix>{{ i18n.ts.enabled }}</template>
+						<template v-else #suffix>{{ i18n.ts.disabled }}</template>
 						<template v-if="remoteNotesCleaningForm.modified.value" #footer>
 							<MkFormFooter :form="remoteNotesCleaningForm"/>
 						</template>

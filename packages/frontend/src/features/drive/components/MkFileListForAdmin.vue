@@ -18,13 +18,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 				:key="file.id"
 				v-tooltip.mfm="`${file.type}\n${bytes(file.size)}\n${dateString(file.createdAt)}\nby ${file.user ? '@' + Misskey.acct.toString(file.user) : 'system'}`"
 				:to="`/admin/file/${file.id}`"
+				:aria-label="file.name"
 				:class="[$style.file, '_button']"
 			>
 				<div v-if="file.isSensitive" :class="$style.sensitiveLabel">{{ i18n.ts.sensitive }}</div>
 				<MkDriveFileThumbnail :class="$style.thumbnail" :file="file" fit="contain" :highlightWhenSensitive="true"/>
 				<div v-if="viewMode === 'list'" :class="$style.body">
 					<div>
-						<small style="opacity: 0.7;">{{ file.name }}</small>
+						<small style="color: var(--MI-text-muted);">{{ file.name }}</small>
 					</div>
 					<div>
 						<MkAcct v-if="file.user" :user="file.user"/>
@@ -100,9 +101,13 @@ defineProps<{
 	grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 	gap: 12px;
 
+	/* 縦横比の違う画像を contain で収めるので、枠の地を塗ってマスの大きさを揃えて見せる */
 	> .file {
 		position: relative;
 		aspect-ratio: 1;
+		background: var(--MI_THEME-panel);
+		border-radius: 8px;
+		overflow: clip;
 	}
 
 	.thumbnail {

@@ -220,7 +220,8 @@ const headerActions = computed(() => [
 	},
 	{
 		asFullButton: true,
-		icon: 'ti ti-search',
+		// 検索と見分けられるよう、照会は別のアイコンにする
+		icon: 'ti ti-user-search',
 		text: i18n.ts.lookup,
 		handler: lookupUser,
 	},

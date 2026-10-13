@@ -106,5 +106,5 @@ onMounted(() => {
 /* 混ぜるアクセントを 40% までにして、どの割合でも同じ文字色で読めるようにする */
 .cell[style] { background: color-mix(in srgb, var(--MI_THEME-accent) calc(var(--level) * 40%), var(--MI_THEME-panel)); }
 .cell:empty { background: none; }
-.empty { min-height: 120px; display: grid; place-items: center; opacity: 0.65; }
+.empty { min-height: 120px; display: grid; place-items: center; color: var(--MI-text-muted); }
 </style>

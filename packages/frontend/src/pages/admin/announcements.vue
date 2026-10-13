@@ -17,6 +17,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<MkLoading v-if="loading"/>
 			<MkError v-else-if="fetchError" @retry="refresh()"/>
 
+			<MkResult v-else-if="announcements.length === 0" type="empty"/>
+
 			<template v-else>
 				<MkFolder v-for="(announcement, index) in announcements" :key="announcement.id ?? announcement._id ?? index" :defaultOpen="announcement.id == null">
 					<template #label>{{ announcement.title }}</template>

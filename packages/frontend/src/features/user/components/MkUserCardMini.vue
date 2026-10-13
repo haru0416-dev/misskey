@@ -81,7 +81,7 @@ $bodyInfoHieght: 16px;
 	display: block;
 	width: 100%;
 	font-size: 95%;
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	line-height: $bodyInfoHieght;
 	white-space: nowrap;
 	overflow: hidden;

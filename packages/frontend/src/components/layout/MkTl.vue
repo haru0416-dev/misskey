@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<div :class="$style.right">
 			<slot v-if="item.type === 'event'" name="right" :event="item.data" :timestamp="item.timestamp" :delta="item.delta"></slot>
-			<div v-else :class="$style.dateLabel"><i class="ti ti-chevron-up"></i> {{ item.prevText }}</div>
+			<div v-else :class="$style.dateLabel">{{ item.text }}</div>
 		</div>
 	</template>
 </div>
@@ -43,12 +43,15 @@ const events = computed(() => {
 	return props.events.toSorted((a, b) => b.timestamp - a.timestamp);
 });
 
+// 区切りはまとめる単位までを出す。日ごとなら日付だけ、時間ごとなら時まで。
 function getDateText(dateInstance: Date) {
-	const year = dateInstance.getFullYear();
-	const month = dateInstance.getMonth() + 1;
-	const date = dateInstance.getDate();
-	const hour = dateInstance.getHours();
-	return `${year.toString()}/${month.toString()}/${date.toString()} ${hour.toString().padStart(2, '0')}:00:00`;
+	const day = `${dateInstance.getFullYear()}/${dateInstance.getMonth() + 1}/${dateInstance.getDate()}`;
+	return props.groupBy === 'h' ? `${day} ${dateInstance.getHours().toString().padStart(2, '0')}:00` : day;
+}
+
+function isSameGroup(a: Date, b: Date) {
+	const sameDay = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+	return props.groupBy === 'h' ? sameDay && a.getHours() === b.getHours() : sameDay;
 }
 
 type TlItem<T> = ({
@@ -60,20 +63,25 @@ type TlItem<T> = ({
 } | {
 	id: string;
 	type: 'date';
-	prev: Date;
-	prevText: string;
-	next: Date | null;
-	nextText: string;
+	text: string;
 });
 
+// 各まとまりの先頭に、その下に並ぶ出来事の日付 (または時) を置く。
 const items = computed<TlItem<T>[]>(() => {
 	const results: TlItem<T>[] = [];
 
 	for (const [i, item] of events.value.entries()) {
+		const prevItem = events.value[i - 1];
 		const nextItem = events.value[i + 1];
-
 		const date = new Date(item.timestamp);
-		const nextDate = nextItem == null ? null : new Date(nextItem.timestamp);
+
+		if (prevItem == null || !isSameGroup(new Date(prevItem.timestamp), date)) {
+			results.push({
+				id: `date-${item.id}`,
+				type: 'date',
+				text: getDateText(date),
+			});
+		}
 
 		results.push({
 			id: item.id,
@@ -82,36 +90,6 @@ const items = computed<TlItem<T>[]>(() => {
 			delta: nextItem == null ? 0 : item.timestamp - nextItem.timestamp,
 			data: item.data,
 		});
-
-		if (i !== events.value.length - 1 && nextDate != null) {
-			let needsSeparator = false;
-
-			if (props.groupBy === 'd') {
-				needsSeparator = (
-					date.getFullYear() !== nextDate.getFullYear() ||
-					date.getMonth() !== nextDate.getMonth() ||
-					date.getDate() !== nextDate.getDate()
-				);
-			} else if (props.groupBy === 'h') {
-				needsSeparator = (
-					date.getFullYear() !== nextDate.getFullYear() ||
-					date.getMonth() !== nextDate.getMonth() ||
-					date.getDate() !== nextDate.getDate() ||
-					date.getHours() !== nextDate.getHours()
-				);
-			}
-
-			if (needsSeparator) {
-				results.push({
-					id: `date-${item.id}`,
-					type: 'date',
-					prev: date,
-					prevText: getDateText(date),
-					next: nextDate,
-					nextText: getDateText(nextDate),
-				});
-			}
-		}
 	}
 
 	return results;
@@ -197,7 +175,7 @@ const items = computed<TlItem<T>[]>(() => {
 }
 
 .dateLabel {
-	opacity: 0.7;
+	color: var(--MI-text-muted);
 	font-size: 90%;
 	padding: 4px;
 	margin: 8px 0;

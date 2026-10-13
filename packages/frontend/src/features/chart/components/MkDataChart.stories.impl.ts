@@ -103,7 +103,13 @@ export const Compact = {
 		const svg = hoverCenter(canvasElement);
 
 		expect(svg.querySelectorAll('path, rect').length).toBeGreaterThan(0);
-		expect([...svg.querySelectorAll('text')], '軸ラベルは出ない').toHaveLength(0);
+		// 簡易表示でも縦軸の値は出し、横軸の日付は出さない。
+		const labels = [...svg.querySelectorAll('text')].map((text) => text.textContent ?? '');
+		expect(labels.length, '縦軸の値が出る').toBeGreaterThan(0);
+		expect(
+			labels.filter((label) => !/^[\d,.]+$/.test(label)),
+			'横軸の日付は出ない',
+		).toEqual([]);
 
 		// 軸を落としても凡例とホバーは残る。
 		const canvas = within(canvasElement);

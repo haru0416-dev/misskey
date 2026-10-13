@@ -318,7 +318,13 @@ watch(
 	}
 }
 
+/*
+ * 見出しと右側の値が並びきらないときは、右側の値を幅の半分までに抑えて省略記号で縮め、見出しに残りを渡す。
+ * 右側を縮めないと、ロールのポリシーのように値が長い行で見出しが 2/3 まで潰れたうえで途中から切れる。
+ */
 .headerText {
+	flex: 0 1 auto;
+	min-width: 0;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
@@ -337,9 +343,20 @@ watch(
 }
 
 .headerRight {
+	display: flex;
+	align-items: center;
+	flex: 0 1 auto;
+	min-width: 0;
+	max-width: 50%;
 	margin-left: auto;
 	color: var(--MI-text-muted);
 	white-space: nowrap;
+}
+
+.headerRightText {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .headerRightText:not(:empty) {

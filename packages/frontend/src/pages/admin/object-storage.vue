@@ -53,14 +53,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<SearchMarker>
 							<MkInput v-model="objectStorageAccessKey">
 								<template #prefix><i class="ti ti-key"></i></template>
-								<template #label><SearchLabel>Access key</SearchLabel></template>
+								<template #label><SearchLabel>{{ i18n.ts._controlPanel.accessKey }}</SearchLabel></template>
 							</MkInput>
 						</SearchMarker>
 
 						<SearchMarker>
 							<MkInput v-model="objectStorageSecretKey" type="password" autocomplete="new-password">
 								<template #prefix><i class="ti ti-key"></i></template>
-								<template #label><SearchLabel>Secret key</SearchLabel></template>
+								<template #label><SearchLabel>{{ i18n.ts._controlPanel.secretKey }}</SearchLabel></template>
 							</MkInput>
 						</SearchMarker>
 					</FormSplit>
@@ -87,7 +87,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<SearchMarker>
 						<MkSwitch v-model="objectStorageS3ForcePathStyle">
-							<template #label><SearchLabel>s3ForcePathStyle</SearchLabel></template>
+							<template #label><SearchLabel>{{ i18n.ts._controlPanel.s3ForcePathStyle }}</SearchLabel></template>
 							<template #caption><SearchText>{{ i18n.ts.s3ForcePathStyleDesc }}</SearchText></template>
 						</MkSwitch>
 					</SearchMarker>

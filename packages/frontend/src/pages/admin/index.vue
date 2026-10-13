@@ -13,11 +13,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 
 				<div class="_gaps_s">
-					<MkInfo v-if="thereIsUnresolvedAbuseReport" warn>{{ i18n.ts.thereIsUnresolvedAbuseReportWarning }} <MkA to="/admin/abuses" class="_link">{{ i18n.ts.check }}</MkA></MkInfo>
-					<MkInfo v-if="noMaintainerInformation" warn>{{ i18n.ts.noMaintainerInformationWarning }} <MkA to="/admin/settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-					<MkInfo v-if="noInquiryUrl" warn>{{ i18n.ts.noInquiryUrlWarning }} <MkA to="/admin/settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-					<MkInfo v-if="noBotProtection" warn>{{ i18n.ts.noBotProtectionWarning }} <MkA to="/admin/security" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
-					<MkInfo v-if="noEmailServer" warn>{{ i18n.ts.noEmailServerWarning }} <MkA to="/admin/email-settings" class="_link">{{ i18n.ts.configure }}</MkA></MkInfo>
+					<MkInfo v-if="thereIsUnresolvedAbuseReport" warn>{{ i18n.ts.thereIsUnresolvedAbuseReportWarning }} <MkA to="/admin/abuses" class="_link _hitArea">{{ i18n.ts.check }}</MkA></MkInfo>
+					<MkInfo v-if="noMaintainerInformation" warn>{{ i18n.ts.noMaintainerInformationWarning }} <MkA to="/admin/settings" class="_link _hitArea">{{ i18n.ts.configure }}</MkA></MkInfo>
+					<MkInfo v-if="noInquiryUrl" warn>{{ i18n.ts.noInquiryUrlWarning }} <MkA to="/admin/settings" class="_link _hitArea">{{ i18n.ts.configure }}</MkA></MkInfo>
+					<MkInfo v-if="noBotProtection" warn>{{ i18n.ts.noBotProtectionWarning }} <MkA to="/admin/security" class="_link _hitArea">{{ i18n.ts.configure }}</MkA></MkInfo>
+					<MkInfo v-if="noEmailServer" warn>{{ i18n.ts.noEmailServerWarning }} <MkA to="/admin/email-settings" class="_link _hitArea">{{ i18n.ts.configure }}</MkA></MkInfo>
 				</div>
 
 				<MkSuperMenu :def="menuDef" :searchIndex="searchIndex" :grid="narrow"></MkSuperMenu>
@@ -104,7 +104,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [
 		items: [
 			{
 				type: 'button',
-				icon: 'ti ti-search',
+				icon: 'ti ti-world-search',
 				text: i18n.ts.lookup,
 				action: adminLookup,
 			},
@@ -154,8 +154,8 @@ const menuDef = computed<SuperMenuDef[]>(() => [
 				active: currentPage.value?.route.name === 'emojis',
 			},
 			{
-				icon: 'ti ti-icons',
-				text: i18n.ts.customEmojis + '(beta)',
+				icon: 'ti ti-table',
+				text: i18n.ts._controlPanel.customEmojisGrid,
 				to: '/admin/emojis2',
 				active: currentPage.value?.route.name === 'emojis2',
 			},

@@ -7,57 +7,57 @@ SPDX-License-Identifier: AGPL-3.0-only
 <div class="_spacer" style="--MI_SPACER-w: 1000px;">
 	<div :class="$style.root">
 		<MkFoldableSection :class="[$style.section, $style.summary]">
-			<template #header>Stats</template>
+			<template #header>{{ i18n.ts.statistics }}</template>
 			<XStats/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Active users</template>
+			<template #header>{{ i18n.ts._charts.activeUsers }}</template>
 			<XActiveUsers/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Heatmap</template>
+			<template #header>{{ i18n.ts._controlPanel.activityHeatmap }}</template>
 			<XHeatmap/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="[$style.section, $style.wide]">
-			<template #header>Retention rate</template>
+			<template #header>{{ i18n.ts._chart.retention }}</template>
 			<XRetention/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Moderators</template>
+			<template #header>{{ i18n.ts.moderator }}</template>
 			<XModerators/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Federation</template>
+			<template #header>{{ i18n.ts.federation }}</template>
 			<XFederation/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="[$style.section, $style.wide]">
-			<template #header>Instances</template>
+			<template #header>{{ i18n.ts.instances }}</template>
 			<XInstances/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Ap requests</template>
+			<template #header>{{ i18n.ts._controlPanel.apRequests }}</template>
 			<XApRequests/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>New users</template>
+			<template #header>{{ i18n.ts._controlPanel.newUsers }}</template>
 			<XUsers/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Deliver queue</template>
+			<template #header>{{ i18n.ts._controlPanel.deliverQueue }}</template>
 			<XQueue domain="deliver"/>
 		</MkFoldableSection>
 
 		<MkFoldableSection :class="$style.section">
-			<template #header>Inbox queue</template>
+			<template #header>{{ i18n.ts._controlPanel.inboxQueue }}</template>
 			<XQueue domain="inbox"/>
 		</MkFoldableSection>
 	</div>

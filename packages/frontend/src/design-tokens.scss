@@ -59,6 +59,14 @@
 	 * Toneriko Dark (文字 #c1cbd1) は 7.0 以上になり、本文用の 4.5 を満たす。opacity 0.7 は Light で 3.5 前後になる。
 	 */
 	--MI-text-muted: color-mix(in srgb, var(--MI_THEME-fg) 85%, transparent);
+	/*
+	 * 増減・成否を色で示す文字。success / error / warn をそのまま文字に使うと、Toneriko Light の地 #e5ecf1 に対して
+	 * success #2e9c60 は 2.9、error #ec4137 は 3.3、warn #ecb637 は 1.6 しかない。強調文字色へ寄せ、地とパネルの両方で
+	 * Light は success 4.6・error 5.1・warn 4.7、Toneriko Dark は success 8.0・error 6.0・warn 11.3 以上になる割合にしている。
+	 */
+	--MI-text-success: color-mix(in srgb, var(--MI_THEME-success) 55%, var(--MI_THEME-fgHighlighted));
+	--MI-text-error: color-mix(in srgb, var(--MI_THEME-error) 60%, var(--MI_THEME-fgHighlighted));
+	--MI-text-warn: color-mix(in srgb, var(--MI_THEME-warn) 30%, var(--MI_THEME-fgHighlighted));
 	--MI-shadow-sm: 0 2px 8px color-mix(in oklab, var(--MI_THEME-shadow) 62%, transparent);
 	--MI-shadow-md: 0 8px 16px color-mix(in oklab, var(--MI_THEME-shadow) 72%, transparent);
 

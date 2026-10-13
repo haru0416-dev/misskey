@@ -190,7 +190,7 @@ onMounted(() => {
 					margin-top: 4px;
 					font-size: 0.78em;
 					line-height: 1.2;
-					opacity: 0.72;
+					color: var(--MI-text-muted);
 				}
 			}
 		}
