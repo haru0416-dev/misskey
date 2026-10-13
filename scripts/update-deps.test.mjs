@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { pickUpdate, pickUpdateSkipping, splitHeldMajors, syncOverrides } from './update-deps.mjs';
+import { patchedVersions, pickUpdate, pickUpdateSkipping, splitHeldMajors, syncOverrides } from './update-deps.mjs';
 
 const DAY = 24 * 60 * 60 * 1000;
 const now = Date.UTC(2026, 8, 28);
@@ -86,6 +86,23 @@ describe('pickUpdateSkipping', () => {
 			major: null,
 			skipped: null,
 		});
+	});
+});
+
+describe('patchedVersions', () => {
+	test('scope 付きを含む name@version を名前と版に分ける', () => {
+		const result = patchedVersions({
+			'@rushstack/ts-command-line@5.3.16': 'dependency-patches/a.patch',
+			'sugar-high@2.5.1': 'dependency-patches/b.patch',
+		});
+		expect([...result]).toEqual([
+			['@rushstack/ts-command-line', '5.3.16'],
+			['sugar-high', '2.5.1'],
+		]);
+	});
+
+	test('指定が無ければ空', () => {
+		expect(patchedVersions(undefined).size).toBe(0);
 	});
 });
 

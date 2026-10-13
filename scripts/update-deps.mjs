@@ -99,6 +99,21 @@ export function pickUpdateSkipping(current, versions, now, minAgeMs, skip) {
 	return { ...pick, skipped: unrestricted !== pick.compatible ? unrestricted : null };
 }
 
+/**
+ * root の patchedDependencies (`name@version`) から、パッチを当てている依存の名前と版を取り出す。
+ * 版を上げるとパッチが当たらなくなるので、これらは自動では上げない。
+ * @param {Record<string, string> | undefined} patched
+ * @returns {Map<string, string>}
+ */
+export function patchedVersions(patched) {
+	const result = new Map();
+	for (const key of Object.keys(patched ?? {})) {
+		const at = key.lastIndexOf('@');
+		if (at > 0) result.set(key.slice(0, at), key.slice(at + 1));
+	}
+	return result;
+}
+
 function readMinAgeSeconds() {
 	const bunfig = readFileSync('bunfig.toml', 'utf8');
 	const match = /^minimumReleaseAge\s*=\s*(\d+)/m.exec(bunfig);
@@ -258,6 +273,7 @@ async function main() {
 		}
 	});
 
+	const patched = patchedVersions(manifests.find(({ path }) => path === 'package.json')?.json.patchedDependencies);
 	const updated = [];
 	const majors = [];
 	const skipped = [];
@@ -265,11 +281,19 @@ async function main() {
 	names.forEach((name, index) => {
 		const from = currentByName.get(name);
 		const { compatible, major, skipped: skippedVersion } = picks[index];
-		if (compatible != null) {
+		const heldByPatch = compatible != null && patched.get(name) === from;
+		if (heldByPatch) {
+			skipped.push({
+				name,
+				from,
+				to: compatible,
+				reason: `dependency-patches のパッチを ${from} に当てている。上げるときはパッチを新しい版で作り直す`,
+			});
+		} else if (compatible != null) {
 			updated.push({ name, from, to: compatible });
 			targetByName.set(name, compatible);
 		}
-		if (major != null) majors.push({ name, from: compatible ?? from, to: major });
+		if (major != null) majors.push({ name, from: heldByPatch ? from : (compatible ?? from), to: major });
 		if (skippedVersion != null) {
 			skipped.push({ name, from: compatible ?? from, to: skippedVersion, reason: skippedVersions[name].reason });
 		}
