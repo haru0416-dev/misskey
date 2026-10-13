@@ -6,16 +6,6 @@
 import tinycolor from 'tinycolor2';
 import lightTheme from '@/shared/themes/_light.json5';
 import darkTheme from '@/shared/themes/_dark.json5';
-import type { BundledTheme } from 'shiki/themes';
-
-type ThemeCodeHighlighterValue =
-	| string
-	| number
-	| boolean
-	| null
-	| ThemeCodeHighlighterValue[]
-	| { [key: string]: ThemeCodeHighlighterValue };
-type ThemeCodeHighlighterOverrides = { [key: string]: ThemeCodeHighlighterValue };
 
 export type Theme = {
 	id: string;
@@ -24,15 +14,6 @@ export type Theme = {
 	desc?: string;
 	base?: 'dark' | 'light';
 	props: Record<string, string>;
-	codeHighlighter?:
-		| {
-				base: BundledTheme;
-				overrides?: ThemeCodeHighlighterOverrides;
-		  }
-		| {
-				base: '_none_';
-				overrides: ThemeCodeHighlighterOverrides;
-		  };
 };
 
 export type CompiledTheme = Record<string, string>;
@@ -174,34 +155,7 @@ type ThemeCandidate = Record<string, unknown> & {
 	desc?: unknown;
 	base?: unknown;
 	props?: unknown;
-	codeHighlighter?: unknown;
 };
-
-type ThemeCodeHighlighterCandidate = Record<string, unknown> & {
-	base?: unknown;
-	overrides?: unknown;
-};
-
-function isJsonValue(value: unknown, ancestors = new Set<object>()): value is ThemeCodeHighlighterValue {
-	if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-		return true;
-	}
-	if (typeof value !== 'object') {
-		return false;
-	}
-	if (ancestors.has(value)) {
-		return false;
-	}
-
-	const nextAncestors = new Set(ancestors).add(value);
-	if (Array.isArray(value)) {
-		return value.every((item) => isJsonValue(item, nextAncestors));
-	}
-	if (!isRecord(value)) {
-		return false;
-	}
-	return Object.values(value).every((item) => isJsonValue(item, nextAncestors));
-}
 
 export function validateTheme(theme: unknown): theme is Theme {
 	if (!isRecord(theme)) {
@@ -225,24 +179,6 @@ export function validateTheme(theme: unknown): theme is Theme {
 	}
 	if (!isRecord(candidate.props) || !Object.values(candidate.props).every((value) => typeof value === 'string')) {
 		return false;
-	}
-	if (candidate.codeHighlighter !== undefined) {
-		if (!isRecord(candidate.codeHighlighter)) {
-			return false;
-		}
-		const codeHighlighter = candidate.codeHighlighter as ThemeCodeHighlighterCandidate;
-		if (typeof codeHighlighter.base !== 'string') {
-			return false;
-		}
-		if (
-			codeHighlighter.overrides !== undefined &&
-			(!isRecord(codeHighlighter.overrides) || !isJsonValue(codeHighlighter.overrides))
-		) {
-			return false;
-		}
-		if (codeHighlighter.base === '_none_' && codeHighlighter.overrides === undefined) {
-			return false;
-		}
 	}
 	return true;
 }

@@ -3,97 +3,68 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { createHighlighterCore } from 'shiki/core';
-import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
-import darkPlus from 'shiki/themes/dark-plus.mjs';
-import { bundledThemesInfo } from 'shiki/themes';
-import { bundledLanguagesInfo } from 'shiki/langs';
-import lightTheme from '@/shared/themes/_light.json5';
-import darkTheme from '@/shared/themes/_dark.json5';
-import { defaultLightTheme, defaultDarkTheme } from '@/shared/themes/default.js';
-import { unique } from '@/utility/array.js';
-import { deepClone } from '@/utility/clone.js';
-import { deepMerge } from '@/utility/merge.js';
-import type { HighlighterCore, LanguageRegistration, ThemeRegistration, ThemeRegistrationRaw } from 'shiki/core';
-import { prefer } from '@/preferences.js';
+import { parse, render } from 'sugar-high/core';
+import { lang as normalizeLanguage, languages } from 'sugar-high/lang';
+import { onCommentEnd, onCommentStart } from 'sugar-high/lang/c';
+import type { ParseOptions, TokenType } from 'sugar-high/core';
 
-let _highlighter: HighlighterCore | null = null;
-let _highlighterPromise: Promise<HighlighterCore> | null = null;
+// AiScript は sugar-high に無いので、キーワードと C 系のコメント (// と /* */) だけで定義する。
+// テンプレート文字列 (`...{x}...`) は全体を文字列として色付けする。
+const aiscript: ParseOptions = {
+	keywords: new Set([
+		'let',
+		'var',
+		'if',
+		'elif',
+		'else',
+		'return',
+		'each',
+		'for',
+		'loop',
+		'break',
+		'continue',
+		'match',
+		'case',
+		'default',
+		'eval',
+		'exists',
+		'do',
+		'while',
+		'null',
+		'true',
+		'false',
+	]),
+	onCommentStart,
+	onCommentEnd,
+	jsx: false,
+	regex: false,
+	templateStrings: true,
+};
 
-export async function getTheme(mode: 'light' | 'dark', getName: true): Promise<string>;
-export async function getTheme(
-	mode: 'light' | 'dark',
-	getName?: false,
-): Promise<ThemeRegistration | ThemeRegistrationRaw>;
-export async function getTheme(
-	mode: 'light' | 'dark',
-	getName = false,
-): Promise<ThemeRegistration | ThemeRegistrationRaw | string | null> {
-	const theme = deepClone(
-		mode === 'light' ? (prefer.lightTheme ?? defaultLightTheme) : (prefer.darkTheme ?? defaultDarkTheme),
+const plaintext = languages.find((language) => language.id === 'plaintext')?.config;
+
+/** コードブロックの言語名 (別名・拡張子を含む) を、色付けの設定に解決する。知らない言語は色を付けない。 */
+export function resolveCodeLanguage(name: string | undefined): ParseOptions | undefined {
+	if (name == null) return plaintext;
+	const lowered = name.toLowerCase();
+	if (lowered === 'is' || lowered === 'ais' || lowered === 'aiscript') return aiscript;
+	// JSON5 はコメント・引用符なしのキー・末尾のカンマを含む JavaScript の式の書き方なので、JavaScript として色付けする。
+	const id = normalizeLanguage(lowered === 'json5' ? 'javascript' : lowered);
+	return (id != null ? languages.find((language) => language.id === id)?.config : undefined) ?? plaintext;
+}
+
+/** 色付けした HTML を返す。行は `\n` で区切り、文字はすべてエスケープ済み。 */
+export function highlightCode(code: string, language: string | undefined): string {
+	// sugar-high は \n だけで行を分けるので、CRLF の \r が行末のトークンに残る。HTML として読むと
+	// その \r も改行になり空行が増えるため、先に \n へそろえる。
+	return render(parse(code.replaceAll(/\r\n?/g, '\n'), resolveCodeLanguage(language)));
+}
+
+export type CodeToken = { content: string; type: TokenType; color: string };
+
+/** 行ごとのトークンを返す。色は `--sh-*` の CSS 変数で、テーマの codeBlock* から決まる。 */
+export function tokenizeCodeLines(code: string, language: string | undefined): CodeToken[][] {
+	return parse(code, resolveCodeLanguage(language)).lines.map((line) =>
+		line.tokens.map(({ type, value }) => ({ content: value, type, color: `var(--sh-${type})` })),
 	);
-
-	if (theme.base) {
-		const base = [lightTheme, darkTheme].find((x) => x.id === theme.base);
-		if (base && base.codeHighlighter) {
-			theme.codeHighlighter = { ...base.codeHighlighter, ...theme.codeHighlighter };
-		}
-	}
-
-	if (theme.codeHighlighter) {
-		let _res: ThemeRegistration = {};
-		if (theme.codeHighlighter.base === '_none_') {
-			_res = deepClone(theme.codeHighlighter.overrides) as ThemeRegistration;
-		} else {
-			const base = (await bundledThemesInfo.find((t) => t.id === theme.codeHighlighter!.base)?.import()) ?? darkPlus;
-			_res = deepMerge<ThemeRegistration>(
-				(theme.codeHighlighter.overrides ?? {}) as ThemeRegistration,
-				'default' in base ? base.default : base,
-			);
-		}
-		if (_res.name == null) {
-			_res.name = theme.id;
-		}
-		_res.type = mode;
-
-		if (getName) {
-			return _res.name!;
-		}
-		return _res;
-	}
-
-	if (getName) {
-		return 'dark-plus';
-	}
-	return darkPlus;
-}
-
-export function getHighlighter(): Promise<HighlighterCore> {
-	if (_highlighter) {
-		return Promise.resolve(_highlighter);
-	}
-
-	_highlighterPromise ??= initHighlighter().catch((error: unknown) => {
-		_highlighterPromise = null;
-		throw error;
-	});
-	return _highlighterPromise;
-}
-
-async function initHighlighter() {
-	const themes = unique([darkPlus, ...(await Promise.all([getTheme('light'), getTheme('dark')]))]);
-
-	const jsLangInfo = bundledLanguagesInfo.find((t) => t.id === 'javascript');
-	const highlighter = await createHighlighterCore({
-		engine: createJavaScriptRegexEngine({ forgiving: true }),
-		themes,
-		langs: [
-			...(jsLangInfo ? [async () => await jsLangInfo.import()] : []),
-			async () => (await import('./aiscript.tmLanguage.json')).default as unknown as LanguageRegistration,
-		],
-	});
-
-	_highlighter = highlighter;
-
-	return highlighter;
 }

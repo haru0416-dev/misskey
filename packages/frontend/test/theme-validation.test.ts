@@ -51,32 +51,16 @@ describe('theme validation', () => {
 		{ ...validTheme, props: null },
 		{ ...validTheme, props: [] },
 		{ ...validTheme, props: { accent: 1 } },
-		{ ...validTheme, codeHighlighter: [] },
-		{ ...validTheme, codeHighlighter: { base: '_none_' } },
-		{ ...validTheme, codeHighlighter: { base: '_none_', overrides: [] } },
 	])('rejects an invalid theme: %j', (theme) => {
 		expect(validateTheme(theme)).toBe(false);
 	});
 
-	test('rejects non-JSON code highlighter overrides', () => {
-		expect(
-			validateTheme({
-				...validTheme,
-				codeHighlighter: { base: '_none_', overrides: { transform: () => null } },
-			}),
-		).toBe(false);
-	});
-
-	test('rejects circular code highlighter overrides', () => {
-		const overrides: Record<string, unknown> = {};
-		overrides['self'] = overrides;
-
-		expect(
-			validateTheme({
-				...validTheme,
-				codeHighlighter: { base: '_none_', overrides },
-			}),
-		).toBe(false);
+	test('accepts a theme that still has the removed codeHighlighter field', () => {
+		// 利用者が保存したテーマには、使われていない codeHighlighter 欄が残っていることがある。
+		// コードの色は props の codeBlock* で決まるので、その欄は読み飛ばしてテーマ自体は読み込む。
+		const legacy = { ...validTheme, codeHighlighter: { base: 'one-dark-pro', overrides: { colors: {} } } };
+		expect(validateTheme(legacy)).toBe(true);
+		expect(compile(legacy)['accent']).toBe('rgb(171, 205, 239)');
 	});
 
 	test.each([

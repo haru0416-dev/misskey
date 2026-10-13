@@ -5,21 +5,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <!-- eslint-disable vue/no-v-html -->
 <template>
-<div
-	:class="[$style.codeBlockRoot, {
+<pre
+	:class="[$style.root, {
 		[$style.codeEditor]: codeEditor,
 		[$style.outerStyle]: !codeEditor && withOuterStyle,
-		[$style.dark]: darkMode,
-		[$style.light]: !darkMode,
-	}]" v-html="html"></div>
+	}]"
+><code :class="$style.code" v-html="html"></code></pre>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, toRef, watch } from 'vue';
-import { bundledLanguagesInfo } from 'shiki/langs';
-import type { BundledLanguage } from 'shiki/langs';
-import { getHighlighter, getTheme } from '@/features/code/code-highlighter.js';
-import { store } from '@/store.js';
+import { computed } from 'vue';
+import { highlightCode } from '@/features/code/code-highlighter.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -34,138 +30,56 @@ const props = withDefaults(
 	},
 );
 
-const highlighter = await getHighlighter();
-const darkMode = toRef(store, 'darkMode');
-const codeLang = ref<BundledLanguage | 'aiscript'>('js');
-
-const [lightThemeName, darkThemeName] = await Promise.all([getTheme('light', true), getTheme('dark', true)]);
-
-const html = computed(() =>
-	highlighter.codeToHtml(props.code, {
-		lang: codeLang.value,
-		themes: {
-			fallback: 'dark-plus',
-			light: lightThemeName,
-			dark: darkThemeName,
-		},
-		defaultColor: false,
-		cssVariablePrefix: '--shiki-',
-	}),
-);
-
-async function fetchLanguage(to: string): Promise<void> {
-	const language = to as BundledLanguage;
-
-	if (!highlighter.getLoadedLanguages().includes(language)) {
-		const bundles = bundledLanguagesInfo.filter((bundle) => {
-			// Shiki は言語 ID とエイリアスの両方を受け付けるため、両方を照合する。
-			return bundle.id === language || bundle.aliases?.includes(language);
-		});
-		const bundle = bundles[0];
-		if (bundle != null) {
-			if (_DEV_) {
-				console.log(`Loading language: ${language}`);
-			}
-			await highlighter.loadLanguage(bundle.import);
-			codeLang.value = language;
-		} else {
-			codeLang.value = 'js';
-		}
-	} else {
-		codeLang.value = language;
-	}
-}
-
-watch(
-	() => props.lang,
-	(to) => {
-		if (codeLang.value === to || !to) {
-			return;
-		}
-		return new Promise((resolve) => {
-			fetchLanguage(to).then(() => resolve);
-		});
-	},
-	{ immediate: true },
-);
+// highlightCode は文字をすべてエスケープした HTML を返すので、v-html に渡してよい。
+const html = computed(() => highlightCode(props.code, props.lang));
 </script>
 
 <style module lang="scss">
-.codeBlockRoot :global(.shiki) {
+@use '@/features/code/_code-colors.scss' as code;
+
+.root {
+	@include code.code-colors;
 	overflow: auto;
+	color: var(--MI_THEME-codeBlockFg);
 	font-family: Consolas, Monaco, Andale Mono, Ubuntu Mono, monospace;
-
-	color: var(--shiki-fallback);
-
-	& span {
-		color: var(--shiki-fallback);
-	}
-
-	& pre,
-	& code {
-		font-family: Consolas, Monaco, Andale Mono, Ubuntu Mono, monospace;
-	}
 }
 
-.outerStyle.codeBlockRoot :global(.shiki) {
+.code {
+	font-family: inherit;
+}
+
+.outerStyle {
 	padding: 1em;
 	margin: 0;
 	border-radius: 8px;
 	border: 1px solid var(--MI_THEME-divider);
-	background-color: var(--shiki-fallback-bg);
+	background-color: var(--MI_THEME-codeBlockBg);
 }
 
-.light.codeBlockRoot :global(.shiki) {
-	color: var(--shiki-light);
-
-	& span {
-		color: var(--shiki-light);
-	}
-}
-
-.light.outerStyle.codeBlockRoot :global(.shiki),
-.light.codeEditor.codeBlockRoot :global(.shiki) {
-	background-color: var(--shiki-light-bg);
-}
-
-.dark.codeBlockRoot :global(.shiki) {
-	color: var(--shiki-dark);
-
-	& span {
-		color: var(--shiki-dark);
-	}
-}
-
-.dark.outerStyle.codeBlockRoot :global(.shiki),
-.dark.codeEditor.codeBlockRoot :global(.shiki) {
-	background-color: var(--shiki-dark-bg);
-}
-
-.codeBlockRoot.codeEditor {
-	min-width: 100%;
+// MkCodeEditor の textarea の下に重ねて表示する。文字の位置を textarea と揃えるため、余白・行の高さ・
+// 文字の大きさは textarea と同じ値にする。
+.codeEditor {
+	padding: 12px;
+	margin: 0;
+	border-radius: 6px;
+	border: none;
+	min-height: 130px;
+	pointer-events: none;
+	min-width: calc(100% - 24px);
 	height: 100%;
+	display: inline-block;
+	line-height: 1.5em;
+	font-size: 1em;
+	overflow: visible;
+	text-rendering: inherit;
+	text-transform: inherit;
+	white-space: pre;
+	background-color: var(--MI_THEME-codeBlockBg);
 
-	& :global(.shiki) {
-		padding: 12px;
-		margin: 0;
-		border-radius: 6px;
-		border: none;
-		min-height: 130px;
-		pointer-events: none;
-		min-width: calc(100% - 24px);
-		height: 100%;
+	// 末尾が改行のとき最後の行は空になる。textarea はその行の高さを取るので、こちらも行ごとに高さを持たせる。
+	& :global(.sh__line) {
 		display: inline-block;
-		line-height: 1.5em;
-		font-size: 1em;
-		overflow: visible;
-		text-rendering: inherit;
-    text-transform: inherit;
-    white-space: pre;
-
-		& span {
-			display: inline-block;
-			min-height: 1em;
-		}
+		min-height: 1em;
 	}
 }
 </style>

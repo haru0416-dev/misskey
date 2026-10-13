@@ -199,7 +199,7 @@ watch(v, (newValue) => {
 	resize: none;
 	text-align: left;
 	color: transparent;
-	caret-color: var(--MI_THEME-fg);
+	caret-color: var(--MI_THEME-codeBlockFg);
 	background-color: transparent;
 	border: 0;
 	border-radius: 6px;

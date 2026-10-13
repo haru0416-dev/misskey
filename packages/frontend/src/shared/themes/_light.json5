@@ -69,11 +69,16 @@
 		codeString: '#b98710',
 		codeNumber: '#0fbbbb',
 		codeBoolean: '#62b70c',
+		codeBlockBg: '#eff1f5',
+		codeBlockFg: '#4c4f69',
+		codeBlockKeyword: '#8839ef',
+		codeBlockString: '#317a21',
+		codeBlockComment: '#686b7e',
+		codeBlockType: '#976014',
+		codeBlockFunction: '#145ff5',
+		codeBlockProperty: '#4c4f69',
+		codeBlockSign: '#686b7e',
 		deckBg: ':darken<3<@bg',
 		htmlThemeColor: '@bg',
-	},
-
-	codeHighlighter: {
-		base: 'catppuccin-latte',
 	},
 }

@@ -1,0 +1,20 @@
+// SPDX-FileCopyrightText: syuilo and misskey-project
+// SPDX-License-Identifier: AGPL-3.0-only
+//
+// ヘッダーを `//` で書くのは、`/* */` だと `@use` した各 scoped style へそのまま出力されるため。
+//
+// sugar-high はトークンの色を `--sh-<種類>` の CSS 変数で指定する。それをテーマの codeBlock* に結び付ける。
+// テーマのプレビューのように、途中の要素で --MI_THEME-* を上書きしても追従するよう、`:root` ではなく
+// コードを表示する要素自身に置く。
+
+@mixin code-colors {
+	--sh-identifier: var(--MI_THEME-codeBlockFg);
+	--sh-jsxliterals: var(--MI_THEME-codeBlockFg);
+	--sh-keyword: var(--MI_THEME-codeBlockKeyword);
+	--sh-string: var(--MI_THEME-codeBlockString);
+	--sh-comment: var(--MI_THEME-codeBlockComment);
+	--sh-class: var(--MI_THEME-codeBlockType);
+	--sh-entity: var(--MI_THEME-codeBlockFunction);
+	--sh-property: var(--MI_THEME-codeBlockProperty);
+	--sh-sign: var(--MI_THEME-codeBlockSign);
+}

@@ -10,7 +10,6 @@ import { parse } from 'yaml';
 
 import locales from 'i18n';
 import meta from '../../package.json' with { type: 'json' };
-import packageInfo from './package.json' with { type: 'json' };
 import { unwindCssModules } from './builder/unwind-css-module-class-name.js';
 import pluginJson5 from './builder/vite-plugin-json5.js';
 import type { Options as SearchIndexOptions } from './builder/vite-plugin-create-search-index.js';
@@ -76,22 +75,6 @@ export const searchIndexes = [
 		verbose: process.env.FRONTEND_SEARCH_INDEX_VERBOSE === 'true',
 	},
 ] satisfies SearchIndexOptions[];
-
-/**
- * Misskeyのフロントエンドにバンドルせず、CDNなどから別途読み込むリソースを記述する。
- * CDN を使わずにバンドルする場合は、以下の配列から該当要素を削除する。
- */
-const externalPackages = [
-	// shiki（コードブロックのシンタックスハイライトで使用中）はテーマ・言語の定義の容量が大きいため、それらはCDNから読み込む
-	{
-		name: 'shiki',
-		match: /^shiki\/(?<subPkg>(langs|themes))$/,
-		path(id: string, pattern: RegExp): string {
-			const match = pattern.exec(id)?.groups;
-			return match ? `https://esm.sh/shiki@${packageInfo.dependencies.shiki}/${match['subPkg']}` : id;
-		},
-	},
-];
 
 // 起動処理 (main-boot) から静的にたどれるモジュールの集合。ビルドごとに 1 度だけ求める。
 let startupModuleIds: Set<string> | null = null;
@@ -240,7 +223,6 @@ export function getConfig(): UserConfig {
 					i18n: './src/i18n.ts',
 					entry: './src/boot/entry.ts',
 				},
-				external: externalPackages.map((p) => p.match),
 				preserveEntrySignatures: 'allow-extension',
 				output: {
 					...output,
@@ -268,15 +250,6 @@ export function getConfig(): UserConfig {
 								name: (id, ctx) => (isStartupModule(id, ctx) ? 'startup' : null),
 							},
 						],
-					},
-					paths(id) {
-						for (const p of externalPackages) {
-							if (p.match.test(id)) {
-								return p.path(id, p.match);
-							}
-						}
-
-						return id;
 					},
 				},
 			},

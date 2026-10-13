@@ -27,12 +27,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive, shallowRef, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { diffLines, diffWordsWithSpace } from 'diff';
-import { getHighlighter, getTheme } from '@/features/code/code-highlighter.js';
+import { tokenizeCodeLines } from '@/features/code/code-highlighter.js';
 import { i18n } from '@/i18n.js';
-import { store } from '@/store.js';
-import { prefer } from '@/preferences.js';
 
 type Part = { content: string; color?: string | undefined; changed?: boolean };
 type Line = {
@@ -48,33 +46,14 @@ const props = defineProps<{
 	language?: 'javascript';
 }>();
 
-const highlighter = shallowRef<Awaited<ReturnType<typeof getHighlighter>>>();
-const themes = shallowRef<{ light: string; dark: string }>();
 const expanded = reactive(new Set<number>());
-
-watch(() => [props.language, prefer.lightTheme, prefer.darkTheme], async (_, __, onCleanup) => {
-	let cancelled = false;
-	onCleanup(() => { cancelled = true; });
-	if (!props.language) return;
-	try {
-		const [value, light, dark] = await Promise.all([getHighlighter(), getTheme('light'), getTheme('dark')]);
-		await value.loadTheme(light, dark);
-		if (cancelled) return;
-		highlighter.value = value;
-		themes.value = { light: light.name ?? 'dark-plus', dark: dark.name ?? 'dark-plus' };
-	} catch (error) {
-		// 強調用リソースが取得できなくても、監査ログの差分自体は読めるようにする。
-		if (!cancelled) console.warn('Failed to highlight moderation log diff.', error);
-	}
-}, { immediate: true });
 
 watch(() => [props.oldString, props.newString], () => expanded.clear());
 
 const entries = computed(() => {
-	const theme = store.darkMode ? themes.value?.dark : themes.value?.light;
 	const tokenize = (source: string): Part[][] => {
-		if (props.language && highlighter.value && theme) {
-			return highlighter.value.codeToTokens(source, { lang: props.language, theme }).tokens;
+		if (props.language) {
+			return tokenizeCodeLines(source, props.language);
 		}
 		return source.split('\n').map(content => [{ content }]);
 	};
@@ -150,11 +129,14 @@ const entries = computed(() => {
 </script>
 
 <style lang="scss" module>
+@use '@/features/code/_code-colors.scss' as code;
+
 .root {
+	@include code.code-colors;
 	max-height: 300px;
 	overflow: auto;
-	background: var(--MI_THEME-bg);
-	color: var(--MI_THEME-fg);
+	background: var(--MI_THEME-codeBlockBg);
+	color: var(--MI_THEME-codeBlockFg);
 }
 
 .table {

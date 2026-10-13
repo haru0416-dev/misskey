@@ -112,6 +112,7 @@
 		"vitest": "5.0.3"
 	},
 	"patchedDependencies": {
-		"@rushstack/ts-command-line@5.3.16": "dependency-patches/@rushstack%2Fts-command-line@5.3.16.patch"
+		"@rushstack/ts-command-line@5.3.16": "dependency-patches/@rushstack%2Fts-command-line@5.3.16.patch",
+		"sugar-high@2.5.1": "dependency-patches/sugar-high@2.5.1.patch"
 	}
 }

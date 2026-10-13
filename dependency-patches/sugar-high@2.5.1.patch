@@ -1,0 +1,13 @@
+diff --git a/lib/presets/javascript-runtime.js b/lib/presets/javascript-runtime.js
+index 66d3ee28589593344c1a4d1479ee0256bf602e79..d493ab056292f42ebed55fbe699e5a62728c7259 100644
+--- a/lib/presets/javascript-runtime.js
++++ b/lib/presets/javascript-runtime.js
+@@ -465,7 +465,7 @@ function tokenize(code, options) {
+     if (__jsxEnter) {
+       // <: open tag sign
+       // new '<' not inside jsx
+-      if (!__jsxTag && curr === '<') {
++      if (!__jsxTag && curr === '<' && !onCommentStart(curr, next, i, code)) {
+         append()
+         if (next === '/') {
+           // close tag

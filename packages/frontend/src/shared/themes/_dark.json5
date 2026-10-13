@@ -69,11 +69,16 @@
 		codeString: '#ffb675',
 		codeNumber: '#cfff9e',
 		codeBoolean: '#c59eff',
+		codeBlockBg: '#282c34',
+		codeBlockFg: '#abb2bf',
+		codeBlockKeyword: '#c678dd',
+		codeBlockString: '#98c379',
+		codeBlockComment: '#91959e',
+		codeBlockType: '#e5c07b',
+		codeBlockFunction: '#61afef',
+		codeBlockProperty: '#e2747d',
+		codeBlockSign: '#abb2bf',
 		deckBg: '#000',
 		htmlThemeColor: '@bg',
-	},
-
-	codeHighlighter: {
-		base: 'one-dark-pro',
 	},
 }
