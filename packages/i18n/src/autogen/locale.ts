@@ -11999,4 +11999,42 @@ export interface Locale extends ILocale {
          */
         "mfm": string;
     };
+    "_databaseStats": {
+        /**
+         * データベース全体の大きさ
+         */
+        "databaseSize": string;
+        /**
+         * テーブル
+         */
+        "table": string;
+        /**
+         * 行数
+         */
+        "rows": string;
+        /**
+         * データ
+         */
+        "dataSize": string;
+        /**
+         * インデックス
+         */
+        "indexSize": string;
+        /**
+         * 合計
+         */
+        "totalSize": string;
+        /**
+         * チャートのテーブル
+         */
+        "chartTables": string;
+        /**
+         * {n} テーブル
+         */
+        "tableCount": ParameterizedString<"n">;
+        /**
+         * 行数は PostgreSQL の統計による推定値で、実際の件数とずれることがあります。データの大きさには TOAST を含みます。
+         */
+        "description": string;
+    };
 }

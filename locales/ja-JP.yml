@@ -3203,3 +3203,13 @@ _qr:
   scanFile: "端末の画像をスキャン"
   raw: "テキスト"
   mfm: "MFM"
+_databaseStats:
+  databaseSize: "データベース全体の大きさ"
+  table: "テーブル"
+  rows: "行数"
+  dataSize: "データ"
+  indexSize: "インデックス"
+  totalSize: "合計"
+  chartTables: "チャートのテーブル"
+  tableCount: "{n} テーブル"
+  description: "行数は PostgreSQL の統計による推定値で、実際の件数とずれることがあります。データの大きさには TOAST を含みます。"

@@ -3557,10 +3557,28 @@ describe('Endpoints', () => {
 	});
 
 	describe('admin database stats', () => {
-		test('admin/get-table-stats はユーザーテーブルのDB統計を返す', async () => {
-			const tables = await api('admin/get-table-stats', {}, alice);
-			expect(tables.status).toBe(200);
-			expect(tables.body['user']).toEqual({ count: expect.any(Number), size: expect.any(Number) });
+		test('admin/get-table-stats はテーブルだけを大きい順に、データとインデックスに分けて返す', async () => {
+			const res = await api('admin/get-table-stats', {}, alice);
+			expect(res.status).toBe(200);
+			const { databaseSize, tables } = res.body;
+			const user = tables.find((table) => table.name === 'user');
+			expect(user).toEqual({
+				name: 'user',
+				count: expect.any(Number),
+				dataSize: expect.any(Number),
+				indexSize: expect.any(Number),
+				totalSize: expect.any(Number),
+			});
+			for (const table of tables) {
+				expect(table.dataSize + table.indexSize).toBe(table.totalSize);
+				expect(table.count).toBeGreaterThanOrEqual(0);
+			}
+			expect(tables.map((table) => table.totalSize)).toEqual(
+				tables.map((table) => table.totalSize).toSorted((a, b) => b - a),
+			);
+			// シーケンス (ID の採番) はテーブルではないので含めない。
+			expect(tables.some((table) => table.name.endsWith('_id_seq'))).toBe(false);
+			expect(databaseSize).toBeGreaterThanOrEqual(tables.reduce((sum, table) => sum + table.totalSize, 0));
 		});
 	});
 });

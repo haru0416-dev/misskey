@@ -9105,10 +9105,14 @@ export interface operations {
                 };
                 content: {
                     'application/json': {
-                        [key: string]: {
+                        databaseSize: number;
+                        tables: {
+                            name: string;
                             count: number;
-                            size: number;
-                        };
+                            dataSize: number;
+                            indexSize: number;
+                            totalSize: number;
+                        }[];
                     };
                 };
             };

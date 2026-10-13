@@ -1148,23 +1148,41 @@ export const endpointMetas = {
 				type: 'object',
 				optional: false,
 				nullable: false,
-				additionalProperties: {
-					type: 'object',
-					properties: {
-						count: {
-							type: 'number',
-						},
-						size: {
-							type: 'number',
+				properties: {
+					databaseSize: {
+						type: 'number',
+						optional: false,
+						nullable: false,
+					},
+					tables: {
+						type: 'array',
+						optional: false,
+						nullable: false,
+						items: {
+							type: 'object',
+							optional: false,
+							nullable: false,
+							properties: {
+								name: { type: 'string', optional: false, nullable: false },
+								count: { type: 'number', optional: false, nullable: false },
+								dataSize: { type: 'number', optional: false, nullable: false },
+								indexSize: { type: 'number', optional: false, nullable: false },
+								totalSize: { type: 'number', optional: false, nullable: false },
+							},
 						},
 					},
-					required: ['count', 'size'],
 				},
 				example: {
-					migrations: {
-						count: 66,
-						size: 32_768,
-					},
+					databaseSize: 10_485_760,
+					tables: [
+						{
+							name: 'note',
+							count: 120,
+							dataSize: 65_536,
+							indexSize: 229_376,
+							totalSize: 294_912,
+						},
+					],
 				},
 			},
 		},
