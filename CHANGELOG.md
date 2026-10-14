@@ -108,7 +108,7 @@
 - Enhance: サーバー情報で、バナーがないときの暗い帯と、説明がないときの「説明」の見出しを出さないように
 - Enhance: 絵文字ピッカーで、空の「最近使用」とカスタム絵文字の欄を出さず、絵文字の分類名を日本語で表示
 - Enhance: スマホの設定画面で、項目のまとまりの間に区切り線を入れた
-- Enhance: コードブロックの色付けを shiki から sugar-high に置き換え、文法とテーマを外部の CDN (esm.sh) から読まないように。最初のコードブロックで読む量は約 100KB から約 11KB (brotli) に減る。色を付ける言語は約 37 (JS/TS/Python/Rust/Go/CSS/SQL/Shell/YAML/HTML など) と AiScript で、ほかの言語は色を付けずに表示する。コードの色はテーマの props の `codeBlock*` で決まり、文字色とのコントラスト比はどれも 4.5 以上。テーマの `codeHighlighter` は読み飛ばす
+- Enhance: コードブロックの色付けを shiki から sugar-high に置き換え、文法とテーマを外部の CDN (esm.sh) から読まないように。sugar-high は調整したフォークを packages/sugar-high に写して使い、言語ごとに分けて読む。最初のコードブロックで読む量は約 100KB から、JavaScript で 7.1KB、AiScript で 3.8KB、HTML で 8.6KB (brotli) に減る。色を付ける言語は約 37 (JS/TS/Python/Rust/Go/CSS/SQL/Shell/YAML/HTML など) と AiScript で、ほかの言語は色を付けずに表示する。JSON5 は JSON として扱い、引用符のないキーも引用符付きのキーと同じ色にする。YAML はキーと引用符のない値を見分け、URL などの値を 1 つの文字列として色付けする。数値は小数点と指数を含めて 1 つの色にする。差分 (diff) は、追加の行を文字列の色 (codeBlockString)、削除の行を赤、`@@` の範囲の行を関数の色 (codeBlockFunction) で示す。コードの色はテーマの props の `codeBlock*` で決まり、文字色とのコントラスト比はどれも 4.5 以上。テーマの `codeHighlighter` は読み飛ばす
 - Enhance: 新規登録・パスワード再設定・パスワードを忘れたときの画面で、メールアドレス・新しいパスワードの欄をパスワード管理ツールが自動入力できるように
 - Enhance: 設定画面などの複数行の入力欄を、内容に合わせて 500px まで広げるように
 - Enhance: グラフの上の最新値・ピークのまとめと、下の「詳細」の表をなくした

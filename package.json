@@ -13,6 +13,7 @@
 		"packages/i18n",
 		"packages/icons-subsetter",
 		"packages/aiscript",
+		"packages/sugar-high",
 		"packages/mfm-js",
 		"packages/sw",
 		"packages/misskey-js",
@@ -112,7 +113,6 @@
 		"vitest": "5.0.3"
 	},
 	"patchedDependencies": {
-		"@rushstack/ts-command-line@5.3.16": "dependency-patches/@rushstack%2Fts-command-line@5.3.16.patch",
-		"sugar-high@2.5.1": "dependency-patches/sugar-high@2.5.1.patch"
+		"@rushstack/ts-command-line@5.3.16": "dependency-patches/@rushstack%2Fts-command-line@5.3.16.patch"
 	}
 }

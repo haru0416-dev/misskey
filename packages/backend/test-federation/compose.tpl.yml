@@ -53,6 +53,10 @@ services:
         target: /misskey/packages/frontend/package.json
         read_only: true
       - type: bind
+        source: ../../sugar-high/package.json
+        target: /misskey/packages/sugar-high/package.json
+        read_only: true
+      - type: bind
         source: ../scripts/compile-config.js
         target: /misskey/packages/backend/scripts/compile-config.js
         read_only: true

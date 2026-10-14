@@ -1,0 +1,15 @@
+// @ts-check
+const keywords = new Set(
+  'abstract and array as break callable case catch class clone const continue declare default do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile enum eval exit extends false final finally fn for foreach from function global goto if implements include include_once instanceof insteadof interface isset list match namespace new null or print private protected public readonly require require_once return static switch throw trait true try unset use var while xor yield'.split(
+    ' '
+  )
+)
+const typeKeywords = new Set('bool float int iterable mixed never object string void'.split(' '))
+const onCommentStart = (curr, next) =>
+  curr === '#' ? 1 : curr + next === '//' ? 1 : curr + next === '/*' ? 2 : 0
+const onCommentEnd = (prev, curr) => (curr === '\n' ? 1 : prev + curr === '*/' ? 2 : 0)
+
+/** @satisfies {import('../lexer.js').LexerConfig} */
+const config = { keywords, typeKeywords, onCommentStart, onCommentEnd }
+
+export default config

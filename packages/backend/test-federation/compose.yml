@@ -40,6 +40,10 @@ services:
         target: /misskey/packages/frontend/package.json
         read_only: true
       - type: bind
+        source: ../../sugar-high/package.json
+        target: /misskey/packages/sugar-high/package.json
+        read_only: true
+      - type: bind
         source: ../test/resources
         target: /misskey/packages/backend/test/resources
         read_only: true
@@ -153,6 +157,10 @@ services:
       - type: bind
         source: ../../frontend/package.json
         target: /misskey/packages/frontend/package.json
+        read_only: true
+      - type: bind
+        source: ../../sugar-high/package.json
+        target: /misskey/packages/sugar-high/package.json
         read_only: true
       - type: bind
         source: ../../i18n/package.json

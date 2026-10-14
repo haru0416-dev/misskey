@@ -166,7 +166,9 @@
 		"packages/backend/migration/**",
 		"packages/frontend/js-built/**",
 		"packages/frontend/src/**/*.stories.ts",
-		"packages/frontend/src/**/*.stories.impl.ts"
+		"packages/frontend/src/**/*.stories.impl.ts",
+		// フォークから写したもの。lint はフォークで行う
+		"packages/sugar-high/**"
 	],
 	"overrides": [
 		{

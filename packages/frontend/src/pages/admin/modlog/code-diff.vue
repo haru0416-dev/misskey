@@ -27,7 +27,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, shallowRef, watch } from 'vue';
 import { diffLines, diffWordsWithSpace } from 'diff';
 import { tokenizeCodeLines } from '@/features/code/code-highlighter.js';
 import { i18n } from '@/i18n.js';
@@ -50,15 +50,28 @@ const expanded = reactive(new Set<number>());
 
 watch(() => [props.oldString, props.newString], () => expanded.clear());
 
-const entries = computed(() => {
-	const tokenize = (source: string): Part[][] => {
-		if (props.language) {
-			return tokenizeCodeLines(source, props.language);
+// 色付けの言語は読み込みを待つので、読み込むまでは色なしの行 (トークンが無い行) で差分を出す
+const highlighted = shallowRef<{ old: Part[][]; new: Part[][] } | null>(null);
+let generation = 0;
+watch(
+	() => [props.oldString, props.newString, props.language] as const,
+	async ([oldString, newString, language]) => {
+		const current = ++generation;
+		highlighted.value = null;
+		if (!language) {
+			return;
 		}
-		return source.split('\n').map(content => [{ content }]);
-	};
-	const oldTokens = tokenize(props.oldString);
-	const newTokens = tokenize(props.newString);
+		const [oldTokens, newTokens] = await Promise.all([tokenizeCodeLines(oldString, language), tokenizeCodeLines(newString, language)]);
+		if (current === generation && oldTokens != null && newTokens != null) {
+			highlighted.value = { old: oldTokens, new: newTokens };
+		}
+	},
+	{ immediate: true },
+);
+
+const entries = computed(() => {
+	const oldTokens = highlighted.value?.old ?? [];
+	const newTokens = highlighted.value?.new ?? [];
 	const changes = diffLines(props.oldString, props.newString);
 	const lines: Line[] = [];
 	let oldNumber = 0;

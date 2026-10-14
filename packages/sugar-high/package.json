@@ -1,0 +1,145 @@
+{
+	"name": "sugar-high",
+	"version": "2.5.0",
+	"description": "Lightweight, zero-dependency syntax parsing for popular programming languages",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		"./core": {
+			"types": "./lib/core.d.ts",
+			"default": "./lib/core.js"
+		},
+		"./lang": {
+			"types": "./lib/lang.d.ts",
+			"default": "./lib/lang.js"
+		},
+		"./lang/javascript": {
+			"types": "./lib/lang/javascript.d.ts",
+			"default": "./lib/lang/javascript.js"
+		},
+		"./lang/typescript": {
+			"types": "./lib/lang/typescript.d.ts",
+			"default": "./lib/lang/typescript.js"
+		},
+		"./lang/css": {
+			"types": "./lib/lang/css.d.ts",
+			"default": "./lib/lang/css.js"
+		},
+		"./lang/python": {
+			"types": "./lib/lang/python.d.ts",
+			"default": "./lib/lang/python.js"
+		},
+		"./lang/c": {
+			"types": "./lib/lang/c.d.ts",
+			"default": "./lib/lang/c.js"
+		},
+		"./lang/go": {
+			"types": "./lib/lang/go.d.ts",
+			"default": "./lib/lang/go.js"
+		},
+		"./lang/java": {
+			"types": "./lib/lang/java.d.ts",
+			"default": "./lib/lang/java.js"
+		},
+		"./lang/rust": {
+			"types": "./lib/lang/rust.d.ts",
+			"default": "./lib/lang/rust.js"
+		},
+		"./lang/json": {
+			"types": "./lib/lang/json.d.ts",
+			"default": "./lib/lang/json.js"
+		},
+		"./lang/diff": {
+			"types": "./lib/lang/diff.d.ts",
+			"default": "./lib/lang/diff.js"
+		},
+		"./lang/shell": {
+			"types": "./lib/lang/shell.d.ts",
+			"default": "./lib/lang/shell.js"
+		},
+		"./lang/cpp": {
+			"types": "./lib/lang/cpp.d.ts",
+			"default": "./lib/lang/cpp.js"
+		},
+		"./lang/csharp": {
+			"types": "./lib/lang/csharp.d.ts",
+			"default": "./lib/lang/csharp.js"
+		},
+		"./lang/sql": {
+			"types": "./lib/lang/sql.d.ts",
+			"default": "./lib/lang/sql.js"
+		},
+		"./lang/html": {
+			"types": "./lib/lang/html.d.ts",
+			"default": "./lib/lang/html.js"
+		},
+		"./lang/vue": {
+			"types": "./lib/lang/vue.d.ts",
+			"default": "./lib/lang/vue.js"
+		},
+		"./lang/svelte": {
+			"types": "./lib/lang/svelte.d.ts",
+			"default": "./lib/lang/svelte.js"
+		},
+		"./lang/yaml": {
+			"types": "./lib/lang/yaml.d.ts",
+			"default": "./lib/lang/yaml.js"
+		},
+		"./lang/markdown": {
+			"types": "./lib/lang/markdown.d.ts",
+			"default": "./lib/lang/markdown.js"
+		},
+		"./lang/plaintext": {
+			"types": "./lib/lang/plaintext.d.ts",
+			"default": "./lib/lang/plaintext.js"
+		},
+		"./lang/ruby": {
+			"types": "./lib/lang/ruby.d.ts",
+			"default": "./lib/lang/ruby.js"
+		},
+		"./lang/kotlin": {
+			"types": "./lib/lang/kotlin.d.ts",
+			"default": "./lib/lang/kotlin.js"
+		},
+		"./lang/swift": {
+			"types": "./lib/lang/swift.d.ts",
+			"default": "./lib/lang/swift.js"
+		},
+		"./lang/php": {
+			"types": "./lib/lang/php.d.ts",
+			"default": "./lib/lang/php.js"
+		},
+		"./lang/toml": {
+			"types": "./lib/lang/toml.d.ts",
+			"default": "./lib/lang/toml.js"
+		},
+		"./lang/powershell": {
+			"types": "./lib/lang/powershell.d.ts",
+			"default": "./lib/lang/powershell.js"
+		},
+		"./lang/dockerfile": {
+			"types": "./lib/lang/dockerfile.d.ts",
+			"default": "./lib/lang/dockerfile.js"
+		},
+		"./lang/graphql": {
+			"types": "./lib/lang/graphql.d.ts",
+			"default": "./lib/lang/graphql.js"
+		},
+		"./lang/hcl": {
+			"types": "./lib/lang/hcl.d.ts",
+			"default": "./lib/lang/hcl.js"
+		},
+		"./lang/zig": {
+			"types": "./lib/lang/zig.d.ts",
+			"default": "./lib/lang/zig.js"
+		},
+		"./lang/lua": {
+			"types": "./lib/lang/lua.d.ts",
+			"default": "./lib/lang/lua.js"
+		},
+		"./lang/aiscript": {
+			"types": "./lib/lang/aiscript.d.ts",
+			"default": "./lib/lang/aiscript.js"
+		}
+	}
+}

@@ -31,6 +31,8 @@
 		"built/**",
 		// napi-rs が生成する型定義。整形すると次のビルドで書き戻されて往復する。
 		"packages/slacc/index.d.ts",
+		// フォークから写したもの。書式はフォーク側の設定に従う
+		"packages/sugar-high/**",
 		"built-test/**",
 		"chart/**",
 		"coverage/**",

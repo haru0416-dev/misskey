@@ -18,3 +18,16 @@
 	--sh-property: var(--MI_THEME-codeBlockProperty);
 	--sh-sign: var(--MI_THEME-codeBlockSign);
 }
+
+// 差分の行のように、行の中の字句をすべて同じ色にする
+@mixin code-colors-single($color) {
+	--sh-identifier: #{$color};
+	--sh-jsxliterals: #{$color};
+	--sh-keyword: #{$color};
+	--sh-string: #{$color};
+	--sh-comment: #{$color};
+	--sh-class: #{$color};
+	--sh-entity: #{$color};
+	--sh-property: #{$color};
+	--sh-sign: #{$color};
+}

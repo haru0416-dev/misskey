@@ -14,8 +14,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
-import { highlightCode } from '@/features/code/code-highlighter.js';
+import { ref, watch } from 'vue';
+import { highlightCode, highlightCodeIfLoaded, renderPlainCode } from '@/features/code/code-highlighter.js';
 
 const props = withDefaults(
 	defineProps<{
@@ -30,8 +30,29 @@ const props = withDefaults(
 	},
 );
 
-// highlightCode は文字をすべてエスケープした HTML を返すので、v-html に渡してよい。
-const html = computed(() => highlightCode(props.code, props.lang));
+// highlightCode と renderPlainCode は文字をすべてエスケープした HTML を返すので、v-html に渡してよい。
+// 言語を読み込み済みなら同期で色を付ける。読み込む間は最新のコードを色なしで出しておき、読み込めたら差し替える。
+// MkCodeEditor は入力欄の文字を透明にしてこの表示を重ねるので、待つ間も古いコードを出し続けると打った文字が見えない。
+const html = ref(highlightCodeIfLoaded(props.code, props.lang) ?? renderPlainCode(props.code));
+let generation = 0;
+watch(
+	() => [props.code, props.lang] as const,
+	async ([code, lang]) => {
+		const current = ++generation;
+		const ready = highlightCodeIfLoaded(code, lang);
+		if (ready != null) {
+			html.value = ready;
+			return;
+		}
+		html.value = renderPlainCode(code);
+		const highlighted = await highlightCode(code, lang);
+		// 待つ間にコードが変わっていたら、古い結果で上書きしない
+		if (current === generation) {
+			html.value = highlighted;
+		}
+	},
+	{ immediate: true },
+);
 </script>
 
 <style module lang="scss">
@@ -42,6 +63,25 @@ const html = computed(() => highlightCode(props.code, props.lang));
 	overflow: auto;
 	color: var(--MI_THEME-codeBlockFg);
 	font-family: Consolas, Monaco, Andale Mono, Ubuntu Mono, monospace;
+
+	// 差分の追加・削除・範囲の行は、行の中の字句をすべて 1 色にする。背景に色を敷くと、コードの背景に対して
+	// 4.6 程度しかない記号やコメントの色が 4.5 を割るため、文字の色で示す。削除の赤は --MI-text-error と同じ混ぜ方で、
+	// 標準テーマのコードの背景に対してライト 4.75、ダーク 5.25。テーマのプレビューに追従するよう、ここで混ぜる。
+	& :global(.sh__line[data-annotations~="diff-add"]) {
+		@include code.code-colors-single(var(--MI_THEME-codeBlockString));
+	}
+
+	& :global(.sh__line[data-annotations~="diff-remove"]) {
+		@include code.code-colors-single(color-mix(in srgb, var(--MI_THEME-error) 60%, var(--MI_THEME-fgHighlighted)));
+	}
+
+	& :global(.sh__line[data-annotations~="diff-hunk"]) {
+		@include code.code-colors-single(var(--MI_THEME-codeBlockFunction));
+	}
+
+	& :global(.sh__line[data-annotations~="diff-meta"]) {
+		font-weight: bold;
+	}
 }
 
 .code {

@@ -138,7 +138,7 @@
         "qr-code-styling": "1.9.2",
         "qr-scanner": "1.4.2",
         "seedrandom": "3.0.5",
-        "sugar-high": "2.5.1",
+        "sugar-high": "workspace:*",
         "throttle-debounce": "5.0.2",
         "tinycolor2": "1.6.0",
         "vue": "3.5.43",
@@ -246,6 +246,10 @@
         "@napi-rs/cli": "3.10.7",
       },
     },
+    "packages/sugar-high": {
+      "name": "sugar-high",
+      "version": "2.5.0",
+    },
     "packages/sw": {
       "name": "sw",
       "dependencies": {
@@ -280,7 +284,6 @@
   ],
   "patchedDependencies": {
     "@rushstack/ts-command-line@5.3.16": "dependency-patches/@rushstack%2Fts-command-line@5.3.16.patch",
-    "sugar-high@2.5.1": "dependency-patches/sugar-high@2.5.1.patch",
   },
   "overrides": {
     "@hapi/wreck": "18.1.2",
@@ -2045,7 +2048,7 @@
 
     "strtok3": ["strtok3@10.3.5", "", { "dependencies": { "@tokenizer/token": "0.3.0" } }, "sha512-ki4hZQfh5rX0QDLLkOCj+h+CVNkqmp/CMf8v8kZpkNVK6jGQooMytqzLZYUVYIZcFZ6yDB70EfD8POcFXiF5oA=="],
 
-    "sugar-high": ["sugar-high@2.5.1", "", { "peerDependencies": { "gpu-lexer": ">=0.0.2" }, "optionalPeers": ["gpu-lexer"] }, "sha512-Skhak2gN96Ywvkdwi8q3kmCmV4rbBTUuYOd71ilxao8wZ1G3O87zofSxl1FogNyeTT2bHC5NMfEEm6/i7Pc8SA=="],
+    "sugar-high": ["sugar-high@workspace:packages/sugar-high"],
 
     "supports-color": ["supports-color@8.1.1", "", { "dependencies": { "has-flag": "4.0.0" } }, "sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q=="],
 
