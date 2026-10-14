@@ -102,7 +102,7 @@ bun run migrate
 Then run `bun run dev` to watch the backend, frontend, embed, service worker, and their dependencies.
 
 - Server-side source files and automatically builds them if they are modified. Automatically start the server process(es).
-- Service Worker is watched by esbuild.
+- Service Worker is watched by rolldown.
 - Vite HMR (just the `vite` command) is available. The behavior may be different from production.
 - Vite runs behind the backend (the backend will proxy Vite at /vite and /embed_vite except for websocket used for HMR).
 - You can see Misskey by accessing `http://localhost:3000` (Replace `3000` with the port configured at `server.listen.tcp.port` in `.config/default.yml`).

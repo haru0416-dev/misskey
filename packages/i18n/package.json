@@ -29,8 +29,9 @@
 	"devDependencies": {
 		"@types/node": "26.6.4",
 		"chokidar": "5.0.0",
-		"esbuild": "0.28.2",
+		"tsdown": "0.23.0",
 		"typescript": "6.0.3",
+		"typescript-native": "npm:typescript@7.0.2",
 		"vitest": "5.0.3"
 	}
 }

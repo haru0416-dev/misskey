@@ -4,17 +4,16 @@
  */
 
 import fs from 'node:fs';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { basename, dirname, resolve } from 'node:path';
 import { watch as chokidarWatch } from 'chokidar';
-import * as esbuild from 'esbuild';
-import { build } from 'esbuild';
+import { build } from 'tsdown';
 import { generateLocaleInterface } from './scripts/generateLocaleInterface.js';
 import { parseLocaleYaml } from './scripts/parseLocaleYaml.js';
 import { languages } from './src/const.js';
 import type { ILocale } from './src/types.js';
-import type { BuildOptions, BuildResult, Plugin, PluginBuild } from 'esbuild';
+import type { InlineConfig } from 'tsdown';
 
 const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
@@ -24,25 +23,38 @@ const _rootPackage = JSON.parse(fs.readFileSync(resolve(_rootPackageDir, 'packag
 const _frontendLocalesDir = resolve(_dirname, '../../built/_frontend_dist_/locales');
 const _localesDir = resolve(_rootPackageDir, 'locales');
 
-const entryPoints = fs.globSync('./src/**/*.{ts,tsx}');
 const localeFiles = new Set(languages.map((lang) => `${lang}.yml`));
+const production = process.env.NODE_ENV === 'production';
 
-const options: BuildOptions = {
-	entryPoints,
-	minify: process.env.NODE_ENV === 'production',
-	sourceRoot: 'src',
-	outdir: './built',
-	target: 'es2022',
-	platform: 'node',
-	format: 'esm',
-	sourcemap: 'linked',
-};
+// 型定義は TypeScript 7 のネイティブ版で出す。このパッケージの typescript は、翻訳の型の生成に JS API を使うため 6 のままにしている。
+// tsdown の既定では、解決できる typescript (6) の JS API で出すので、時間が約 1.9 倍、メモリが約 1.8 倍かかる (1.4 秒・385MB と 0.73 秒・210MB)。
+async function resolveTsgoPath(): Promise<string> {
+	const typescriptNative = dirname(createRequire(import.meta.url).resolve('typescript-native/package.json'));
+	const { default: getExePath } = await import(pathToFileURL(resolve(typescriptNative, 'lib/getExePath.js')).href);
+	return getExePath();
+}
 
 const args = new Set(process.argv.slice(2).map((arg) => arg.toLowerCase()));
 
-if (!args.has('--no-clean')) {
-	fs.rmSync('./built', { recursive: true, force: true });
-}
+const options: InlineConfig = {
+	config: false,
+	cwd: _dirname,
+	// 利用側が i18n/const のように下の階層を import するので、まとめずに src のファイルごとに出す
+	entry: ['./src/**/*.{ts,tsx}'],
+	unbundle: true,
+	format: 'esm',
+	platform: 'node',
+	target: 'es2022',
+	outDir: 'built',
+	// package.json の exports が指す .js と .d.ts の名前で出す
+	fixedExtension: false,
+	sourcemap: true,
+	minify: production,
+	// 本番のビルドでは型定義を使わないので出さない。型定義の source map は、出さない設定でも .d.ts に参照のコメントが付くため出す
+	dts: production ? false : { sourcemap: true, generator: 'tsgo', tsgo: { path: await resolveTsgoPath() } },
+	clean: !args.has('--no-clean'),
+	logLevel: 'warn',
+};
 
 if (args.has('--watch')) {
 	await watchSrc();
@@ -78,57 +90,13 @@ async function buildSrc(): Promise<void> {
 
 	await generateLocaleInterface(_localesDir);
 
-	await build(options)
-		.then(() => {
-			console.log(`[${_package.name}] build succeeded.`);
-		})
-		.catch((err) => {
-			process.stderr.write(err.stderr);
-			process.exit(1);
-		});
+	await build(options);
+	console.log(`[${_package.name}] build succeeded.`);
 
 	writeLocales();
 	await writeFrontendLocalesJson(true);
 
-	if (process.env.NODE_ENV === 'production') {
-		console.log(`[${_package.name}] skip building d.ts because NODE_ENV is production.`);
-	} else {
-		await buildDts();
-	}
-
 	console.log(`[${_package.name}] finish building.`);
-}
-
-function buildDts(): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const child = spawn(
-			'bun',
-			[
-				'run',
-				'--bun',
-				fileURLToPath(new URL('../../scripts/tsc-native.mjs', import.meta.url)),
-				'--project',
-				'tsconfig.json',
-				'--rootDir',
-				'src',
-				'--outDir',
-				'built',
-				'--declaration',
-				'true',
-				'--emitDeclarationOnly',
-				'true',
-			],
-			{ stdio: 'inherit' },
-		);
-		child.once('error', reject);
-		child.once('exit', (code, signal) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				reject(new Error(`型定義の生成が失敗しました: ${signal ? `signal ${signal}` : `code ${code}`}`));
-			}
-		});
-	});
 }
 
 async function watchSrc(): Promise<void> {
@@ -155,28 +123,10 @@ async function watchSrc(): Promise<void> {
 			});
 	});
 
-	const plugins: Plugin[] = [
-		{
-			name: 'gen-dts',
-			setup(build: PluginBuild) {
-				build.onStart(() => {
-					console.log(`[${_package.name}] detect changed...`);
-				});
-				build.onEnd(async (result: BuildResult) => {
-					if (result.errors.length > 0) {
-						console.error(`[${_package.name}] watch build failed:`, result);
-						return;
-					}
-					await buildDts();
-				});
-			},
-		},
-	];
-
 	console.log(`[${_package.name}] start watching...`);
 
-	const context = await esbuild.context({ ...options, plugins });
-	await context.watch();
+	// 型定義もソースの変更ごとに tsdown が出し直す
+	const handle = await build({ ...options, watch: true });
 
 	await new Promise((resolve, reject) => {
 		process.on('SIGHUP', resolve);
@@ -185,7 +135,7 @@ async function watchSrc(): Promise<void> {
 		process.on('uncaughtException', reject);
 		process.on('exit', resolve);
 	}).finally(async () => {
-		await context.dispose();
+		await handle.watch.close();
 		await localesWatcher.close();
 		console.log(`[${_package.name}] finish watching.`);
 	});

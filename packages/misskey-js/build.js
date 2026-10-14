@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import * as esbuild from 'esbuild';
-import { build } from 'esbuild';
+import { build } from 'tsdown';
 import { spawnChecked } from '../../scripts/spawn-checked.mjs';
 
 const _filename = fileURLToPath(import.meta.url);
@@ -10,24 +9,29 @@ const _dirname = dirname(_filename);
 const _package = JSON.parse(fs.readFileSync(_dirname + '/package.json', 'utf-8'));
 const tscNative = fileURLToPath(new URL('../../scripts/tsc-native.mjs', import.meta.url));
 
-const entryPoints = fs.globSync('./src/**/**.{ts,tsx}');
-
-/** @type {import('esbuild').BuildOptions} */
-const options = {
-	entryPoints,
-	minify: process.env.NODE_ENV === 'production',
-	outdir: './built',
-	target: 'es2022',
-	platform: 'browser',
-	format: 'esm',
-	sourcemap: 'linked',
-};
-
 const args = new Set(process.argv.slice(2).map((arg) => arg.toLowerCase()));
 
-if (!args.has('--no-clean')) {
-	fs.rmSync('./built', { recursive: true, force: true });
-}
+// 型定義は tsdown ではなく tsc で出す。tsdown の型定義では `export * as entities` などの名前空間が中身の一覧だけになり、
+// api-extractor の報告書 (etc/misskey-js.api.md) に中の型が載らなくなるため。
+/** @type {import('tsdown').InlineConfig} */
+const options = {
+	config: false,
+	cwd: _dirname,
+	// package.json の exports が下の階層 (misskey-js/api.js など) を指すので、まとめずに src のファイルごとに出す
+	entry: ['./src/**/*.{ts,tsx}'],
+	unbundle: true,
+	format: 'esm',
+	platform: 'browser',
+	target: 'es2022',
+	outDir: 'built',
+	// package.json の exports が指す .js の名前で出す
+	fixedExtension: false,
+	sourcemap: true,
+	minify: process.env.NODE_ENV === 'production',
+	dts: false,
+	clean: !args.has('--no-clean'),
+	logLevel: 'warn',
+};
 
 if (args.has('--watch')) {
 	await watchSrc();
@@ -38,14 +42,8 @@ if (args.has('--watch')) {
 async function buildSrc() {
 	console.log(`[${_package.name}] start building...`);
 
-	await build(options)
-		.then(() => {
-			console.log(`[${_package.name}] build succeeded.`);
-		})
-		.catch((err) => {
-			process.stderr.write(err.stderr);
-			process.exit(1);
-		});
+	await build(options);
+	console.log(`[${_package.name}] build succeeded.`);
 
 	if (process.env.NODE_ENV === 'production') {
 		console.log(`[${_package.name}] skip building d.ts because NODE_ENV is production.`);
@@ -74,28 +72,14 @@ function buildDts() {
 }
 
 async function watchSrc() {
-	const plugins = [
-		{
-			name: 'gen-dts',
-			setup(build) {
-				build.onStart(() => {
-					console.log(`[${_package.name}] detect changed...`);
-				});
-				build.onEnd(async (result) => {
-					if (result.errors.length > 0) {
-						console.error(`[${_package.name}] watch build failed:`, result);
-						return;
-					}
-					await buildDts();
-				});
-			},
-		},
-	];
-
 	console.log(`[${_package.name}] start watching...`);
 
-	const context = await esbuild.context({ ...options, plugins });
-	await context.watch();
+	const handle = await build({
+		...options,
+		watch: true,
+		// ソースが変わるたびに、JS を出し直したあとで型定義も出し直す
+		onSuccess: () => buildDts(),
+	});
 
 	await new Promise((resolve, reject) => {
 		process.on('SIGHUP', resolve);
@@ -104,7 +88,7 @@ async function watchSrc() {
 		process.on('uncaughtException', reject);
 		process.on('exit', resolve);
 	}).finally(async () => {
-		await context.dispose();
+		await handle.watch.close();
 		console.log(`[${_package.name}] finish watching.`);
 	});
 }

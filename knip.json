@@ -49,7 +49,9 @@
 			"entry": ["test/**/*.ts", "test-d/**/*.ts"]
 		},
 		"packages/i18n": {
-			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"]
+			"entry": ["src/index.ts", "src/const.ts", "scripts/**/*.ts"],
+			// build.ts が型定義の生成用に package.json の場所を文字列で解決する
+			"ignoreDependencies": ["typescript-native"]
 		},
 		"packages/icons-subsetter": {
 			"ignoreDependencies": ["harfbuzzjs"]
