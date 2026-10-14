@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<div><slot></slot></div>
 	<div>
 		<MkButton inline primary rounded small @click="_closeTip()"><i class="ti ti-check"></i> {{ i18n.ts.gotIt }}</MkButton>
-		<button class="_button" style="padding: 8px; margin-left: 4px;" :aria-label="i18n.ts.menu" @click="showMenu"><i class="ti ti-dots"></i></button>
+		<button class="_button" style="padding: 8px; margin-left: 4px;" :aria-label="i18n.ts.tipMenu" @click="showMenu"><i class="ti ti-dots"></i></button>
 	</div>
 </div>
 </template>

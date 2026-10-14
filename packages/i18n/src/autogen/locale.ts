@@ -5175,6 +5175,10 @@ export interface Locale extends ILocale {
      */
     "hideAllTips": string;
     /**
+     * 「ヒントとコツ」のメニュー
+     */
+    "tipMenu": string;
+    /**
      * デフォルトの画像圧縮度
      */
     "defaultImageCompressionLevel": string;

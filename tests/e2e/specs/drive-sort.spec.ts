@@ -22,7 +22,7 @@ test.describe('ドライブの並び順', () => {
 		await closeInitialUserSetup(page);
 
 		await page.goto('/my/drive');
-		await page.getByRole('button', { name: 'メニュー' }).click();
+		await page.getByRole('button', { name: 'メニュー', exact: true }).click();
 		await page.getByRole('menuitem', { name: 'ソート' }).click();
 		await page.getByRole('menuitem', { name: '登録日 (昇順)' }).click();
 		const files = page.locator('[data-cy-drive-file]');
@@ -41,7 +41,7 @@ test.describe('ドライブの並び順', () => {
 		await closeInitialUserSetup(page);
 
 		await page.goto('/my/drive');
-		await page.getByRole('button', { name: 'メニュー' }).click();
+		await page.getByRole('button', { name: 'メニュー', exact: true }).click();
 		await page.getByRole('menuitem', { name: 'URLから' }).click();
 		// 受け付けた後のダウンロードで失敗する宛先 (ループバックは取得が拒否される)。
 		await page.getByPlaceholder('アップロードしたいファイルのURL').fill('http://127.0.0.1:9/missing.png');
