@@ -28,10 +28,6 @@ services:
       - NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/rootCA.crt
     volumes:
       - type: bind
-        source: ../../slacc/package.json
-        target: /misskey/packages/slacc/package.json
-        read_only: true
-      - type: bind
         source: ../package.json
         target: /misskey/packages/backend/package.json
         read_only: true
@@ -75,10 +71,6 @@ services:
       - type: bind
         source: ../../icons-subsetter/package.json
         target: /misskey/packages/icons-subsetter/package.json
-        read_only: true
-      - type: bind
-        source: ../../mfm-js/package.json
-        target: /misskey/packages/mfm-js/package.json
         read_only: true
       - type: bind
         source: ../../sw/package.json
@@ -143,10 +135,6 @@ services:
         condition: service_healthy
     volumes:
       - type: bind
-        source: ../../slacc/package.json
-        target: /misskey/packages/slacc/package.json
-        read_only: true
-      - type: bind
         source: ../package.json
         target: /misskey/packages/backend/package.json
         read_only: true
@@ -165,10 +153,6 @@ services:
       - type: bind
         source: ../../icons-subsetter/package.json
         target: /misskey/packages/icons-subsetter/package.json
-        read_only: true
-      - type: bind
-        source: ../../mfm-js/package.json
-        target: /misskey/packages/mfm-js/package.json
         read_only: true
       - type: bind
         source: ../../sw/package.json

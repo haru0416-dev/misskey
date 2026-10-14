@@ -112,7 +112,6 @@ try {
 	await Promise.all([
 		runBun(['run', 'build-pre']),
 		runBun(['run', 'build-assets']),
-		runBun(['run', '--bun', '--filter', 'mfm-js', 'build']),
 		// 開発時も生成済みの型を参照するため、一度はビルドする。
 		runBun(['run', '--bun', '--filter', 'icons-subsetter', 'build']),
 		runBun(['run', '--bun', '--filter', 'misskey-js', 'build']),
@@ -124,7 +123,6 @@ try {
 	startBun(['run', '--bun', '--filter', 'frontend', 'watch:embed']);
 	startBun(['run', '--bun', '--filter', 'sw', 'watch']);
 	startBun(['run', '--bun', '--filter', 'misskey-js', 'watch', '--no-clean']);
-	startBun(['run', '--bun', '--filter', 'mfm-js', 'watch']);
 	startBun(['run', '--bun', '--filter', 'i18n', 'watch', '--no-clean']);
 } catch (error) {
 	if (!shuttingDown) {

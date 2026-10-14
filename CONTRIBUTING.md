@@ -47,9 +47,9 @@ upstream の旧リリース履歴 (2026.6.0 まで) は [docs/archive/upstream-c
 
 Use the Bun version specified in [package.json](./package.json). Install dependencies with `bun install --frozen-lockfile`.
 The application needs PostgreSQL, Valkey, and FFmpeg.
-Building from source also requires a Rust toolchain and C/C++ build tools for the native [slacc module](./packages/slacc/README.md). `bun run build` includes the slacc build; when building only the backend or running backend tests after a fresh install, run `bun run --filter slacc build` first. Docker image builds install the toolchain inside the build stages, so the host does not need Rust.
+mfm-js, toneriko-script and slacc are developed in their own repositories under [toneriko-dev](https://github.com/toneriko-dev) and installed from their release tags, which contain the built files (and slacc's binaries for x86_64 and arm64 Linux with glibc), so a fresh install needs no build step or Rust toolchain for them.
 
-依存更新時は `bun install --frozen-lockfile`、`bun dedupe --check`、`bun audit` を確認します。`dependency-patches/` の Rushstack patch は、API Extractor が使う argparse 2 の厳密な引数オプション・usage handler・ESM 定数 export に対応するためのものです。関連パッケージを更新する場合は patch の適用に加え、MFM の型生成と misskey-js の API report、CLI の引数・エラー処理が維持されることを確認してください。
+依存更新時は `bun install --frozen-lockfile`、`bun dedupe --check`、`bun audit` を確認します。`dependency-patches/` の Rushstack patch は、API Extractor が使う argparse 2 の厳密な引数オプション・usage handler・ESM 定数 export に対応するためのものです。関連パッケージを更新する場合は patch の適用に加え、misskey-js の API report、CLI の引数・エラー処理が維持されることを確認してください。
 
 #### Use system-wide software
 

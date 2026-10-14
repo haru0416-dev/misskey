@@ -17,13 +17,7 @@ services:
       - ./.config/docker.env
     environment:
       - NODE_ENV=production
-    tmpfs:
-      - /misskey/packages/slacc/node_modules
     volumes:
-      - type: bind
-        source: ../../slacc
-        target: /misskey/packages/slacc
-        read_only: true
       - type: bind
         source: ../../../built
         target: /misskey/built
@@ -63,14 +57,6 @@ services:
       - type: bind
         source: ../../icons-subsetter/package.json
         target: /misskey/packages/icons-subsetter/package.json
-        read_only: true
-      - type: bind
-        source: ../../mfm-js/package.json
-        target: /misskey/packages/mfm-js/package.json
-        read_only: true
-      - type: bind
-        source: ../../mfm-js/built
-        target: /misskey/packages/mfm-js/built
         read_only: true
       - type: bind
         source: ../../sw/package.json

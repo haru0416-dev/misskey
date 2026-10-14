@@ -55,9 +55,6 @@
 		},
 		"packages/icons-subsetter": {
 			"ignoreDependencies": ["harfbuzzjs"]
-		},
-		"packages/mfm-js": {
-			"ignoreDependencies": ["@microsoft/api-extractor"]
 		}
 	}
 }

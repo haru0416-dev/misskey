@@ -45,7 +45,6 @@ Docker のサブネットとして `172.20.0.0/16`(連合用)と `10.231.0.0/22`
 
 ```sh
 bun install --frozen-lockfile
-bun run --filter slacc build
 bun run build-pre
 bun run build:backend-deps
 bun run --bun --filter backend build
@@ -173,4 +172,4 @@ fork の永続的な配送の失敗、dead-letter、アカウント削除の調�
 | 一時的な障害と、応答の喪失からの収束 | `resilience`: `outage` と `response-loss`。それぞれ `Note`、`Follow`、`Reaction`、`Delete` を、両方の向きで |
 | 何も起きなかったことは、進行と最終状態で示す | キュー、outbox、プロキシの観測。正確なリモートのノート、リアクション、フォロワー、削除の確認 |
 
-CI は、ロックファイル、Bun のバージョンと設定、ルートの manifest、パッチ、ネイティブの slacc、backend の依存、ビルドのスクリプトが変わったときにも、このテストを動かします([.github/workflows/test-federation.yml](../../../.github/workflows/test-federation.yml))。
+CI は、ロックファイル、Bun のバージョンと設定、ルートの manifest、パッチ、backend の依存、ビルドのスクリプトが変わったときにも、このテストを動かします([.github/workflows/test-federation.yml](../../../.github/workflows/test-federation.yml))。

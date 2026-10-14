@@ -59,19 +59,23 @@ while (stack.length > 0) {
 		if (next != null && !closure.has(next)) stack.push(next);
 	}
 }
-const keepIds = new Set([...closure].map((key) => packages.get(key).id));
-
 // store のディレクトリ名は "名前(/ を + に)@版" に、必要なら "+ハッシュ16桁" が付く。
-function storeEntryId(entry) {
-	const base = entry.replace(/\+[0-9a-f]{16}$/, '');
-	const at = base.lastIndexOf('@');
-	return `${base.slice(0, at).replace('+', '/')}${base.slice(at)}`;
+// git の依存の版は "github:持ち主/リポジトリ#コミット" で、ディレクトリ名では : と / と # が + になる。
+function storeName(id) {
+	const at = id.lastIndexOf('@');
+	return `${id.slice(0, at).replace('/', '+')}@${id.slice(at + 1).replaceAll(/[:/#]/g, '+')}`;
 }
+const withoutHash = (entry) => entry.replace(/\+[0-9a-f]{16}$/, '');
+const storeEntryName = (entry) => {
+	const base = withoutHash(entry);
+	return base.slice(0, base.lastIndexOf('@')).replace('+', '/');
+};
+const keepNames = new Set([...closure].map((key) => storeName(packages.get(key).id)));
 
 let removed = 0;
 for (const entry of readdirSync(storeDir)) {
 	if (entry === 'node_modules') continue;
-	if (!keepIds.has(storeEntryId(entry))) {
+	if (!keepNames.has(withoutHash(entry))) {
 		rmSync(join(storeDir, entry), { recursive: true, force: true });
 		removed++;
 	}
@@ -101,7 +105,7 @@ for (const root of roots) {
 for (const entry of readdirSync(storeDir)) {
 	if (entry === 'node_modules') continue;
 	const modules = join(storeDir, entry, 'node_modules');
-	const name = storeEntryId(entry).replace(/@[^@]+$/, '');
+	const name = storeEntryName(entry);
 	const manifestPath = join(modules, name, 'package.json');
 	if (!existsSync(manifestPath)) continue;
 	const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
@@ -119,7 +123,7 @@ for (const entry of readdirSync(storeDir)) {
 	}
 }
 
-console.log(`prune-runtime-modules: roots=${roots.length} kept=${keepIds.size} removed=${removed}`);
+console.log(`prune-runtime-modules: roots=${roots.length} kept=${keepNames.size} removed=${removed}`);
 if (missing.length > 0) {
 	console.error(`prune-runtime-modules: unresolved dependencies after pruning:\n  ${missing.join('\n  ')}`);
 	process.exit(1);

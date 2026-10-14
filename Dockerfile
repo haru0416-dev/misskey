@@ -10,20 +10,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 	; echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache \
 	&& apt-get update \
 	&& apt-get install -yqq --no-install-recommends \
-	build-essential curl \
-	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+	build-essential
 
 WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
 COPY --link ["dependency-patches/", "./dependency-patches/"]
-COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/sugar-high/package.json", "./packages/sugar-high/"]
 COPY --link ["packages/i18n/package.json", "./packages/i18n/"]
 COPY --link ["packages/icons-subsetter/package.json", "./packages/icons-subsetter/"]
-COPY --link ["packages/mfm-js/package.json", "./packages/mfm-js/"]
 COPY --link ["packages/sw/package.json", "./packages/sw/"]
 COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
 COPY --link ["packages/misskey-js/generator/package.json", "./packages/misskey-js/generator/"]
@@ -36,10 +33,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache,sharing=locked \
 
 COPY --link . ./
 
-# napi の型定義置換が既存レイヤーのファイルを ESTALE と判定するため、同じ RUN 内で書き込みレイヤーへ移す。
-RUN . "$HOME/.cargo/env" \
-	&& touch packages/slacc/index.d.ts \
-	&& bun run build \
+RUN bun run build \
 	&& hardlink built/_frontend_vite_
 RUN rm -rf .git/
 
@@ -49,13 +43,11 @@ WORKDIR /misskey
 
 COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
 COPY --link ["dependency-patches/", "./dependency-patches/"]
-COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
 COPY --link ["packages/backend/package.json", "./packages/backend/"]
 COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
 COPY --link ["packages/sugar-high/package.json", "./packages/sugar-high/"]
 COPY --link ["packages/i18n/package.json", "./packages/i18n/"]
 COPY --link ["packages/icons-subsetter/package.json", "./packages/icons-subsetter/"]
-COPY --link ["packages/mfm-js/package.json", "./packages/mfm-js/"]
 COPY --link ["packages/sw/package.json", "./packages/sw/"]
 COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
 COPY --link ["packages/misskey-js/generator/package.json", "./packages/misskey-js/generator/"]
@@ -74,42 +66,6 @@ RUN bun packages/backend/scripts/prune-runtime-modules.mjs /misskey \
 	&& rm -rf \
 	node_modules/.bun/@img+sharp-libvips-linuxmusl-* \
 	node_modules/.bun/@img+sharp-linuxmusl-*
-
-# slacc はリポジトリ内でビルドするので、ターゲットの実行環境向けに別の段で作り、成果物 (.node) だけを渡す。
-# 実行時の依存を入れる段で作ると、ビルド用の依存 (@napi-rs/cli や typescript) が実行用イメージに混ざる。
-FROM oven/bun:${BUN_VERSION}-debian AS slacc-builder
-
-WORKDIR /misskey
-
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-	--mount=type=cache,target=/var/lib/apt,sharing=locked \
-	apt-get update \
-	&& apt-get install -yqq --no-install-recommends build-essential curl \
-	&& curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-
-COPY --link ["bun.lock", "bunfig.toml", "package.json", "./"]
-COPY --link ["dependency-patches/", "./dependency-patches/"]
-COPY --link ["packages/slacc/package.json", "./packages/slacc/"]
-COPY --link ["packages/backend/package.json", "./packages/backend/"]
-COPY --link ["packages/frontend/package.json", "./packages/frontend/"]
-COPY --link ["packages/sugar-high/package.json", "./packages/sugar-high/"]
-COPY --link ["packages/i18n/package.json", "./packages/i18n/"]
-COPY --link ["packages/icons-subsetter/package.json", "./packages/icons-subsetter/"]
-COPY --link ["packages/mfm-js/package.json", "./packages/mfm-js/"]
-COPY --link ["packages/sw/package.json", "./packages/sw/"]
-COPY --link ["packages/misskey-js/package.json", "./packages/misskey-js/"]
-COPY --link ["packages/misskey-js/generator/package.json", "./packages/misskey-js/generator/"]
-COPY --link ["scripts/changelog-checker/package.json", "./scripts/changelog-checker/"]
-
-COPY --link ["packages/slacc", "./packages/slacc/"]
-
-# 型定義を先に書き込みレイヤーへ移し、napi の置換時の ESTALE を避ける。
-RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
-	--mount=type=cache,target=/misskey/packages/slacc/target,sharing=locked \
-	. "$HOME/.cargo/env" \
-	&& bun install --frozen-lockfile --filter slacc \
-	&& touch packages/slacc/index.d.ts \
-	&& bun run --filter slacc build
 
 # ffmpeg/ffprobe は動画のメタデータ取得・サムネイル・フレーム抽出に必要な部品だけを有効にする。
 # blackframe が GPL 対象なので --enable-gpl を指定し、実行用イメージにもライセンスとソースの所在を含める。
@@ -190,8 +146,6 @@ RUN mkdir -p /misskey/files
 COPY --chown=misskey:misskey --from=target-builder /misskey/node_modules ./node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/backend/node_modules ./packages/backend/node_modules
 COPY --chown=misskey:misskey --from=target-builder /misskey/packages/misskey-js/node_modules ./packages/misskey-js/node_modules
-COPY --chown=misskey:misskey --from=slacc-builder ["/misskey/packages/slacc/package.json", "/misskey/packages/slacc/index.cjs", "/misskey/packages/slacc/index.mjs", "/misskey/packages/slacc/index.d.ts", "./packages/slacc/"]
-COPY --chown=misskey:misskey --from=slacc-builder /misskey/packages/slacc/*.node ./packages/slacc/
 COPY --chown=misskey:misskey --from=native-builder /misskey/built ./built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/icons-subsetter/vendor/tabler-icons/LICENSE ./licenses/tabler-icons.txt
 # 自前で組んだ ffmpeg (GPL) と、そのライセンス・ソースの所在。libdav1d7 は AV1 のデコードに要る。
@@ -200,11 +154,9 @@ COPY --chown=misskey:misskey --from=ffmpeg-builder /opt/ffmpeg/licenses ./licens
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/built ./packages/misskey-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/built ./packages/backend/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/built ./packages/i18n/built
-COPY --chown=misskey:misskey --from=native-builder /misskey/packages/mfm-js/built ./packages/mfm-js/built
 COPY --chown=misskey:misskey --from=native-builder /misskey/package.json ./package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/package.json ./packages/backend/package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/i18n/package.json ./packages/i18n/package.json
-COPY --chown=misskey:misskey --from=native-builder /misskey/packages/mfm-js/package.json ./packages/mfm-js/package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/misskey-js/package.json ./packages/misskey-js/package.json
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/scripts/compile-config.js ./packages/backend/scripts/compile-config.js
 COPY --chown=misskey:misskey --from=native-builder /misskey/packages/backend/migration/*.sql ./packages/backend/migration/

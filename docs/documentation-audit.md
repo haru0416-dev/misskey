@@ -145,11 +145,11 @@ upstream の変更履歴と AiScript から引き継いだ文章は、AI の誤�
 | [`packages/frontend/src/README.md`](../packages/frontend/src/README.md) | 83行のlibはnirax.tsのみ、components直下はindex.tsのみ、7分類、boot/router/store/preferences入口を照合。75-83行のAI参加が会話で証明されたstyle節も独立照合。providerはmixinのみ、main/embed独立、:is specificity、error内容更新とstyle一度挿入は支持。asset hash説明はloader例外が漏れている。73行のStorybookは現行catalog名称に更新候補。 |
 | [`packages/i18n/README.md`](../packages/i18n/README.md) | exports、build、watch、verify の入力と出力を確認。watch の初期生成と verify の build 前提・検査範囲に補足が必要です。 |
 | [`packages/icons-subsetter/README.md`](../packages/icons-subsetter/README.md) | 走査、font と CSS の生成を確認。glyph の fallback と class の content 定義を分け、import type の除外範囲も限定する必要があります。 |
-| [`packages/mfm-js/README.md`](../packages/mfm-js/README.md) | 公開関数、full/simple parser、scripts、license を確認。変更を求める不一致はありませんでした。 |
+| [`toneriko-dev/mfm-js/README.md`](https://github.com/toneriko-dev/mfm-js/blob/main/README.md) | 公開関数、full/simple parser、scripts、license を確認。変更を求める不一致はありませんでした。 |
 | [`packages/misskey-js/CONTRIBUTING.md`](../packages/misskey-js/CONTRIBUTING.md) | 型生成、API Extractor、型テストを確認。tsd という実行ツールの説明を直す必要があります。 |
 | [`packages/misskey-js/generator/README.md`](../packages/misskey-js/generator/README.md) | schema の入力と生成先を確認。単独で生成するときの api.json のコピーを明記する必要があります。 |
 | [`packages/misskey-js/README.md`](../packages/misskey-js/README.md) | exports、API と streaming の実装を確認。tree shaking、例外の型、MiAuth で token を取得する流れに訂正が必要です。 |
-| [`packages/slacc/README.md`](../packages/slacc/README.md) | native API、license、backend の利用箇所を確認。バイト列の署名と protocol の組み立てを区別し、生成側の参照先を補う必要があります。 |
+| [`toneriko-dev/slacc/README.md`](https://github.com/toneriko-dev/slacc/blob/main/README.md) | native API、license、backend の利用箇所を確認。バイト列の署名と protocol の組み立てを区別し、生成側の参照先を補う必要があります。 |
 | [`README.md`](../README.md) | 要修正: 初回設定の順序、存在しない checked-in default.yml のポート、テンプレートの必須環境変数、Compose 運用時の設定・bind mount 権限の説明不足。Bun/PG18/Valkey8、Docker 内 Rust、主要 package 構成、MIT 例外のライセンス表示はソースと一致。 |
 | [`SECURITY.md`](../SECURITY.md) | 重大な運用不一致: GitHub GET /repos/haru0416-dev/misskey/private-vulnerability-reporting が enabled:false を返しました。非公開報告・通常 Issue/PR 禁止という文意は維持すべきです。現時点で実際に使える代替非公開窓口は本文にありません。 |
 

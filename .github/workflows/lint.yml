@@ -11,7 +11,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
       - packages/sugar-high/**
@@ -42,7 +41,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
       - packages/sugar-high/**
@@ -107,9 +105,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - run: bun run lint:ox
       # ルートの補助スクリプトのテスト。
       - run: bun test scripts/dependency-inventory.test.mjs scripts/spawn-checked.test.mjs scripts/check-federation-known-failures.test.mjs scripts/ensure-test-config.test.mjs scripts/update-deps.test.mjs
@@ -140,9 +135,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - run: bun run format:ox:check
 
   vue-templates:
@@ -164,9 +156,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - run: bun run lint:vue-templates
 
   typecheck:
@@ -175,7 +164,6 @@ jobs:
     strategy:
       matrix:
         workspace:
-          - mfm-js
           - backend
           - frontend
           - i18n
@@ -198,9 +186,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - run: bun run build:frontend-deps
       - run: bun run --bun --filter ${{ matrix.workspace }} typecheck
       - if: matrix.workspace == 'frontend'

@@ -5,13 +5,11 @@ on:
     branches:
       - master
       - develop
-    # backend の workspace 依存 (i18n / mfm-js / misskey-js / slacc) と Bun の版を変えたときも走らせる。
+    # backend の workspace 依存 (i18n / misskey-js) と Bun の版を変えたときも走らせる。
     paths: &backend-paths
       - packages/backend/**
       - packages/i18n/**
-      - packages/mfm-js/**
       - packages/misskey-js/**
-      - packages/slacc/**
       - .github/workflows/test-backend.yml
       - .github/misskey/test.yml
       - bun.lock
@@ -66,9 +64,6 @@ jobs:
         run: |
           sudo apt install -y ffmpeg
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -113,9 +108,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -159,9 +151,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure
@@ -205,9 +194,6 @@ jobs:
         id: current-date
         run: echo "today=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - name: Check bun.lock
         run: git diff --exit-code bun.lock
       - name: Copy Configure

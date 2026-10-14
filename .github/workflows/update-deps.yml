@@ -61,7 +61,6 @@ jobs:
           TONERIKO_SETUP_PASSWORD: ci-generate-api-json
           DATABASE_PASSWORD: ci-generate-api-json
         run: |
-          bun run --filter slacc build
           cp .config/example.yml .config/default.yml
           bun run build-misskey-js-with-types
           rm .config/default.yml

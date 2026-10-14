@@ -6,7 +6,6 @@ on:
       - master
       - develop
     paths:
-      - packages/mfm-js/**
       - packages/frontend/**
       - packages/sugar-high/**
       - packages/sw/**
@@ -15,7 +14,6 @@ on:
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**
-      - packages/slacc/**
       - tests/e2e/**
       - package.json
       - bun.lock
@@ -23,7 +21,6 @@ on:
       - .github/misskey/test.yml
   pull_request:
     paths:
-      - packages/mfm-js/**
       - packages/frontend/**
       - packages/sugar-high/**
       - packages/sw/**
@@ -32,7 +29,6 @@ on:
       - packages/misskey-js/**
       # e2e 関連
       - packages/backend/**
-      - packages/slacc/**
       - tests/e2e/**
       - package.json
       - bun.lock
@@ -80,8 +76,6 @@ jobs:
         run: bun run playwright:install
       - name: Test
         run: bun run --bun --filter frontend test
-      - name: Test MFM
-        run: bun run --bun --filter mfm-js test
       - name: Test service worker
         run: bun run --bun --filter sw test
       - name: Test i18n

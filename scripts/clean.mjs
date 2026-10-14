@@ -13,7 +13,6 @@ const buildOutputs = [
 	'packages/backend/src-js',
 	'packages/frontend/built',
 	'packages/icons-subsetter/built',
-	'packages/mfm-js/built',
 	'packages/i18n/built',
 	'packages/sw/built',
 	'packages/misskey-js/built',

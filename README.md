@@ -14,10 +14,8 @@ Misskey の upstream には追従しない、独立した製品です。連合�
 | [packages/frontend](./packages/frontend) | Web クライアント。投稿・ユーザー・クリップを外部サイトに埋め込む表示 (`src/embed/`、別のバンドル) と、本体・埋め込み・Service Worker が共有するテーマ・スタイル・ユーティリティ (`src/shared/`) を含む |
 | [packages/sw](./packages/sw) | Service Worker(プッシュ通知など) |
 | [packages/misskey-js](./packages/misskey-js) | API とストリーミングの TypeScript SDK。型はバックエンドの API 定義から生成する |
-| [packages/mfm-js](./packages/mfm-js) | MFM(投稿の装飾記法)のパーサー |
 | [packages/i18n](./packages/i18n) | 言語ファイルの型生成と共通の読み込み処理 |
 | [packages/icons-subsetter](./packages/icons-subsetter) | 使用中の Tabler Icons だけを取り出したフォントを作るツール |
-| [packages/slacc](./packages/slacc) | 署名と zip 展開を行う Rust 製のネイティブモジュール |
 | [locales](./locales) | 言語ファイル。手で編集するのは `ja-JP.yml` だけ |
 | [deploy](./deploy) | Docker Compose の例、nginx の設定、CAPTCHA サービス(Cap)の導入手順 |
 | [tests/e2e](./tests/e2e) | Playwright によるブラウザの E2E テスト |
@@ -26,11 +24,13 @@ Misskey の upstream には追従しない、独立した製品です。連合�
 
 | リポジトリ | 内容 |
 | --- | --- |
+| [toneriko-dev/mfm-js](https://github.com/toneriko-dev/mfm-js) | MFM(投稿の装飾記法)のパーサー |
 | [toneriko-dev/toneriko-script](https://github.com/toneriko-dev/toneriko-script) | Toneriko Script(AiScript から分かれたスクリプト言語)の処理系。Play・ウィジェット・プラグインが使う |
+| [toneriko-dev/slacc](https://github.com/toneriko-dev/slacc) | 署名と zip 展開を行う Rust 製のネイティブモジュール。x86_64 と arm64 の Linux (glibc) 向けのバイナリがタグに入っている |
 
 ## 動かす
 
-実行に必要なものは、[`.bun-version`](./.bun-version) の Bun、PostgreSQL 18、Valkey 8、FFmpeg です。ソースからビルドする開発環境には、[slacc](./packages/slacc/README.md) のネイティブモジュールを作るための Rust ツールチェーンと C/C++ のビルドツールも必要です。Docker イメージのビルドでは Dockerfile 内でこれらを導入するので、ホストへの Rust の導入は不要です。開発用の PostgreSQL と Valkey は、次のコマンドで起動できます。
+実行に必要なものは、[`.bun-version`](./.bun-version) の Bun、PostgreSQL 18、Valkey 8、FFmpeg です。開発用の PostgreSQL と Valkey は、次のコマンドで起動できます。
 
 ```sh
 bun install --frozen-lockfile
@@ -58,4 +58,4 @@ bun run dev
 
 ## ライセンス
 
-このリポジトリは、特に記載のない限り [GNU Affero General Public License v3.0](./LICENSE) で配布しています。[packages/misskey-js](./packages/misskey-js)、[packages/mfm-js](./packages/mfm-js)、[packages/slacc](./packages/slacc) は MIT で、それぞれの `LICENSE` に従います。別のリポジトリで開発している toneriko-script も MIT です。Misskey の開発者と貢献者の著作権表示は、元のまま残してあります。
+このリポジトリは、特に記載のない限り [GNU Affero General Public License v3.0](./LICENSE) で配布しています。[packages/misskey-js](./packages/misskey-js) は MIT で、その `LICENSE` に従います。別のリポジトリで開発している mfm-js、toneriko-script、slacc も MIT です。Misskey の開発者と貢献者の著作権表示は、元のまま残してあります。

@@ -6,8 +6,6 @@ on:
     paths: &federation-paths
       - packages/backend/**
       - packages/misskey-js/**
-      - packages/slacc/**
-      - packages/mfm-js/**
       - packages/i18n/**
       - bun.lock
       - .gitmodules
@@ -75,7 +73,6 @@ jobs:
       - name: Build Misskey
         run: |
           bun install --frozen-lockfile
-          bun run --filter slacc build
           bun run build-pre && bun run build:backend-deps && bun run --bun --filter backend build
       - name: Start isolated peers
         working-directory: packages/backend/test-federation

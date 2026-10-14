@@ -64,7 +64,7 @@
 		"ipaddr.js": "2.5.0",
 		"is-svg": "6.1.0",
 		"jsonld": "9.0.0",
-		"mfm-js": "workspace:*",
+		"mfm-js": "github:toneriko-dev/mfm-js#v0.26.0",
 		"mime-types": "3.0.2",
 		"misskey-js": "workspace:*",
 		"node-html-parser": "9.0.4",
@@ -75,7 +75,7 @@
 		"sanitize-html": "2.18.0",
 		"semver": "7.8.5",
 		"sharp": "0.35.5",
-		"slacc": "workspace:*",
+		"slacc": "github:toneriko-dev/slacc#v0.2.0",
 		"systeminformation": "5.33.15",
 		"web-push": "3.6.7",
 		"zod": "4.6.5"

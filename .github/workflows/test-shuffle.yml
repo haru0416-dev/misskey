@@ -66,9 +66,6 @@ jobs:
       - name: Install FFmpeg
         run: sudo apt install -y ffmpeg
       - run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の実行に必要。
-        run: bun run --filter slacc build
       - name: Copy Configure
         run: cp .github/misskey/test.yml .config
       - name: Build

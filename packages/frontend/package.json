@@ -43,7 +43,7 @@
 		"json5": "2.2.3",
 		"matter-js": "0.20.0",
 		"mediabunny": "1.61.3",
-		"mfm-js": "workspace:*",
+		"mfm-js": "github:toneriko-dev/mfm-js#v0.26.0",
 		"misskey-js": "workspace:*",
 		"pinia": "4.0.3",
 		"qr-code-styling": "1.9.2",

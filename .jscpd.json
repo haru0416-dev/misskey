@@ -12,7 +12,6 @@
 		"**/autogen/**",
 		"**/*.stories.ts",
 		"**/*.stories.impl.ts",
-		"packages/backend/migration/**",
-		"packages/mfm-js/**"
+		"packages/backend/migration/**"
 	]
 }

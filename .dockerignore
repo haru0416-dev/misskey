@@ -10,9 +10,6 @@ built/
 .devcontainer/compose.yml
 node_modules/
 packages/*/node_modules
-packages/slacc/*.node
-# cargo のビルド作業ディレクトリ (数百 MB)。イメージの中では毎回ビルドし直す。
-packages/slacc/target/
 files/
 !.yarn/sdks
 !.yarn/versions

@@ -56,9 +56,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Build slacc
-        # リポジトリ内でビルドするネイティブモジュール。backend の読み込みに必要。
-        run: bun run --filter slacc build
 
       - name: Copy Config
         run: cp .config/example.yml .config/default.yml
