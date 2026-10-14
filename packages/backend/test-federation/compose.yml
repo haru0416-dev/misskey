@@ -77,10 +77,6 @@ services:
         target: /misskey/packages/icons-subsetter/package.json
         read_only: true
       - type: bind
-        source: ../../aiscript/package.json
-        target: /misskey/packages/aiscript/package.json
-        read_only: true
-      - type: bind
         source: ../../mfm-js/package.json
         target: /misskey/packages/mfm-js/package.json
         read_only: true
@@ -169,10 +165,6 @@ services:
       - type: bind
         source: ../../icons-subsetter/package.json
         target: /misskey/packages/icons-subsetter/package.json
-        read_only: true
-      - type: bind
-        source: ../../aiscript/package.json
-        target: /misskey/packages/aiscript/package.json
         read_only: true
       - type: bind
         source: ../../mfm-js/package.json

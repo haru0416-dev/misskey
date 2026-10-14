@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<template #header>{{ i18n.ts._widgets.aiscript }}</template>
 
 	<div class="uylguesu _monospace">
-		<textarea v-model="widgetProps.script" placeholder="(1 + 1)" aria-label="AiScript"></textarea>
+		<textarea v-model="widgetProps.script" placeholder="(1 + 1)" aria-label="Toneriko Script"></textarea>
 		<button class="_buttonPrimary" @click="run">RUN</button>
 		<div class="logs" role="log" aria-live="polite">
 			<div v-for="log in logs" :key="log.id" class="log" :class="{ print: log.print }">{{ log.text }}</div>
@@ -20,13 +20,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { Interpreter, Parser, utils } from '@syuilo/aiscript';
+import { Interpreter, Parser, utils } from 'toneriko-script';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import type { Value } from '@syuilo/aiscript/interpreter/value.js';
+import type { Value } from 'toneriko-script/interpreter/value.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
-import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import { tonerikoScriptReadline, alertTonerikoScriptError, createTonerikoScriptEnv, execTonerikoScriptWithAlert } from '@/toneriko-script/api.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { genId } from '@/utility/id.js';
@@ -69,12 +69,12 @@ const logs = ref<{
 
 const run = async () => {
 	logs.value = [];
-	const aiscript = new Interpreter(createAiScriptEnv({
+	const tonerikoScript = new Interpreter(createTonerikoScriptEnv({
 		storageKey: 'widget',
 		...($i?.token === undefined ? {} : { token: $i.token }),
 	}), {
-		in: aiScriptReadline,
-		err: alertAiScriptError,
+		in: tonerikoScriptReadline,
+		err: alertTonerikoScriptError,
 		out: (value) => {
 			logs.value.push({
 				id: genId(),
@@ -94,7 +94,7 @@ const run = async () => {
 		},
 	});
 
-	await execAiScriptWithAlert(aiscript, parser, widgetProps.script);
+	await execTonerikoScriptWithAlert(tonerikoScript, parser, widgetProps.script);
 };
 
 defineExpose<WidgetComponentExpose>({

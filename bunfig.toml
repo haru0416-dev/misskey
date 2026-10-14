@@ -9,7 +9,6 @@ minimumReleaseAgeExcludes = [
 	"@misskey-dev/emoji-assets",
 	"@misskey-dev/emoji-data",
 	"@misskey-dev/sharp-read-bmp",
-	"@syuilo/aiscript",
 	"mfm-js",
 	"slacc",
 	"vite",

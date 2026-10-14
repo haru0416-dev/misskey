@@ -39,7 +39,6 @@
 		"idea/**",
 		"locales/**",
 		"node_modules/**",
-		"packages/aiscript/**",
 		"packages/backend/migration/**",
 		"packages/backend/built/**",
 		"packages/backend/built-test/**",

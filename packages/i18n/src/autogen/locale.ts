@@ -2280,7 +2280,7 @@ export interface Locale extends ILocale {
      */
     "scratchpad": string;
     /**
-     * スクラッチパッドは、AiScriptの実験環境を提供します。Tonerikoと対話するコードの記述、実行、結果の確認ができます。
+     * スクラッチパッドは、Toneriko Scriptの実験環境を提供します。Tonerikoと対話するコードの記述、実行、結果の確認ができます。
      */
     "scratchpadDescription": string;
     /**
@@ -8762,11 +8762,11 @@ export interface Locale extends ILocale {
          */
         "serverMetric": string;
         /**
-         * AiScriptコンソール
+         * Toneriko Scriptコンソール
          */
         "aiscript": string;
         /**
-         * AiScript App
+         * Toneriko Script App
          */
         "aiscriptApp": string;
         /**
@@ -10550,11 +10550,11 @@ export interface Locale extends ILocale {
             };
             "_pluginParseFailed": {
                 /**
-                 * AiScript エラー
+                 * Toneriko Script エラー
                  */
                 "title": string;
                 /**
-                 * データは取得できたものの、AiScriptの解析時にエラーがあったため読み込めませんでした。プラグインの作者にお問い合わせください。エラーの詳細はJavascriptコンソールをご確認ください。
+                 * データは取得できたものの、Toneriko Scriptの解析時にエラーがあったため読み込めませんでした。プラグインの作者にお問い合わせください。エラーの詳細はJavascriptコンソールをご確認ください。
                  */
                 "description": string;
             };

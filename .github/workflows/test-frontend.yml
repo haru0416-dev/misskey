@@ -6,7 +6,6 @@ on:
       - master
       - develop
     paths:
-      - packages/aiscript/**
       - packages/mfm-js/**
       - packages/frontend/**
       - packages/sugar-high/**
@@ -24,7 +23,6 @@ on:
       - .github/misskey/test.yml
   pull_request:
     paths:
-      - packages/aiscript/**
       - packages/mfm-js/**
       - packages/frontend/**
       - packages/sugar-high/**
@@ -82,8 +80,6 @@ jobs:
         run: bun run playwright:install
       - name: Test
         run: bun run --bun --filter frontend test
-      - name: Test AiScript
-        run: bun run --bun --filter '@syuilo/aiscript' test
       - name: Test MFM
         run: bun run --bun --filter mfm-js test
       - name: Test service worker

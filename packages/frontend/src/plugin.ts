@@ -8,7 +8,7 @@ import { compareVersions } from 'compare-versions';
 import { isSafeMode } from '@/shared/utility/config.js';
 import type * as Misskey from 'misskey-js';
 import type { Plugin } from '@/preferences/def.js';
-import type { Parser, Interpreter, values, utils as utils_TypeReferenceOnly } from '@syuilo/aiscript';
+import type { Parser, Interpreter, values, utils as utils_TypeReferenceOnly } from 'toneriko-script';
 import type { FormWithDefault } from '@/utility/form.js';
 import { genId } from '@/utility/id.js';
 import { store } from '@/store.js';
@@ -17,7 +17,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
 
-export type AiScriptPluginMeta = {
+export type TonerikoScriptPluginMeta = {
 	name: string;
 	version: string;
 	author: string;
@@ -29,12 +29,12 @@ export type AiScriptPluginMeta = {
 let _parser: Parser | null = null;
 
 async function getParser(): Promise<Parser> {
-	const { Parser } = await import('@syuilo/aiscript');
+	const { Parser } = await import('toneriko-script');
 	_parser ??= new Parser();
 	return _parser;
 }
 
-function isSupportedAiScriptVersion(version: string): boolean {
+function isSupportedTonerikoScriptVersion(version: string): boolean {
 	try {
 		return compareVersions(version, '0.12.0') >= 0;
 	} catch {
@@ -42,18 +42,18 @@ function isSupportedAiScriptVersion(version: string): boolean {
 	}
 }
 
-export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta> {
+export async function parsePluginMeta(code: string): Promise<TonerikoScriptPluginMeta> {
 	if (!code) {
 		throw new Error('code is required');
 	}
 
-	const { Interpreter, utils } = await import('@syuilo/aiscript');
+	const { Interpreter, utils } = await import('toneriko-script');
 
 	const lv = utils.getLangVersion(code);
 	if (lv == null) {
 		throw new Error('No language version annotation found');
-	} else if (!isSupportedAiScriptVersion(lv)) {
-		throw new Error(`Aiscript version '${lv}' is not supported`);
+	} else if (!isSupportedTonerikoScriptVersion(lv)) {
+		throw new Error(`Toneriko Script version '${lv}' is not supported`);
 	}
 
 	let ast;
@@ -61,7 +61,7 @@ export async function parsePluginMeta(code: string): Promise<AiScriptPluginMeta>
 		const parser = await getParser();
 		ast = parser.parse(code);
 	} catch (_) {
-		throw new Error('Aiscript syntax error', { cause: _ });
+		throw new Error('Toneriko Script syntax error', { cause: _ });
 	}
 
 	const meta = Interpreter.collectMetadata(ast);
@@ -132,12 +132,12 @@ async function authorizePlugin(plugin: Plugin) {
 	});
 }
 
-export async function installPlugin(code: string, meta?: AiScriptPluginMeta) {
+export async function installPlugin(code: string, meta?: TonerikoScriptPluginMeta) {
 	if (!code) {
 		return;
 	}
 
-	let realMeta: AiScriptPluginMeta;
+	let realMeta: TonerikoScriptPluginMeta;
 	if (!meta) {
 		realMeta = await parsePluginMeta(code);
 	} else {
@@ -291,17 +291,17 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 
 	await authorizePlugin(plugin);
 
-	const { Interpreter, utils } = await import('@syuilo/aiscript');
-	const { aiScriptReadline } = await import('@/aiscript/api.js');
+	const { Interpreter, utils } = await import('toneriko-script');
+	const { tonerikoScriptReadline } = await import('@/toneriko-script/api.js');
 
-	const aiscript = new Interpreter(
+	const tonerikoScript = new Interpreter(
 		await createPluginEnv({
 			plugin,
 			storageKey: 'plugins:' + plugin.installId,
 		}),
 		{
 			maxStep: 100_000,
-			in: aiScriptReadline,
+			in: tonerikoScriptReadline,
 			out: (value): void => {
 				pluginLogs.value.get(plugin.installId)!.push({
 					at: Date.now(),
@@ -320,10 +320,10 @@ async function launchPlugin(id: Plugin['installId']): Promise<void> {
 		},
 	);
 
-	pluginContexts.set(plugin.installId, aiscript);
+	pluginContexts.set(plugin.installId, tonerikoScript);
 
 	const parser = await getParser();
-	await aiscript.exec(parser.parse(plugin.src)).then(
+	await tonerikoScript.exec(parser.parse(plugin.src)).then(
 		() => {
 			console.info('Plugin installed:', plugin.name, 'v' + plugin.version);
 			systemLog('Plugin started');
@@ -396,10 +396,10 @@ export function changePluginActive(plugin: Plugin, active: boolean) {
 async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Promise<Record<string, values.Value>> {
 	const id = opts.plugin.installId;
 
-	const ais = await import('@syuilo/aiscript');
+	const ais = await import('toneriko-script');
 	const values = ais.values;
 	const utils: typeof utils_TypeReferenceOnly = ais.utils;
-	const { createAiScriptEnv } = await import('@/aiscript/api.js');
+	const { createTonerikoScriptEnv } = await import('@/toneriko-script/api.js');
 
 	const config = new Map<string, values.Value>();
 	for (const [k, v] of Object.entries(opts.plugin.config ?? {})) {
@@ -416,7 +416,7 @@ async function createPluginEnv(opts: { plugin: Plugin; storageKey: string }): Pr
 
 	const token = store.pluginTokens[id];
 	const env: Record<string, values.Value> = {
-		...createAiScriptEnv({ ...opts, ...(token === undefined ? {} : { token }) }),
+		...createTonerikoScriptEnv({ ...opts, ...(token === undefined ? {} : { token }) }),
 
 		'Plugin:register:post_form_action': values.FN_NATIVE(([title, handler]) => {
 			utils.assertString(title);

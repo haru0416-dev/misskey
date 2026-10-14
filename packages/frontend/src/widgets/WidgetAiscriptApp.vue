@@ -15,19 +15,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onMounted, ref, watch } from 'vue';
-import { Interpreter, Parser } from '@syuilo/aiscript';
+import { Interpreter, Parser } from 'toneriko-script';
 import { useWidgetPropsManager } from './widget.js';
 import type { Ref } from 'vue';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
+import type { AsUiComponent, AsUiRoot } from '@/toneriko-script/ui.js';
 import * as os from '@/os.js';
-import { aiScriptReadline, alertAiScriptError, createAiScriptEnv } from '@/aiscript/api.js';
+import { tonerikoScriptReadline, alertTonerikoScriptError, createTonerikoScriptEnv } from '@/toneriko-script/api.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
-import MkAsUi from '@/aiscript/components/MkAsUi.vue';
+import MkAsUi from '@/toneriko-script/components/MkAsUi.vue';
 import MkContainer from '@/components/layout/MkContainer.vue';
-import { registerAsUiLib } from '@/aiscript/ui.js';
+import { registerAsUiLib } from '@/toneriko-script/ui.js';
 
 const name = 'aiscriptApp';
 
@@ -66,8 +66,8 @@ const isSyntaxError = ref(false);
 async function run() {
 	isSyntaxError.value = false;
 
-	const aiscript = new Interpreter({
-		...createAiScriptEnv({
+	const tonerikoScript = new Interpreter({
+		...createTonerikoScriptEnv({
 			storageKey: 'widget',
 			...($i?.token === undefined ? {} : { token: $i.token }),
 		}),
@@ -75,8 +75,8 @@ async function run() {
 			root.value = _root.value;
 		}),
 	}, {
-		in: aiScriptReadline,
-		err: alertAiScriptError,
+		in: tonerikoScriptReadline,
+		err: alertTonerikoScriptError,
 		out: (value) => {
 			// ウィジェットでは標準出力を使用しない。
 		},
@@ -93,9 +93,9 @@ async function run() {
 		return;
 	}
 	try {
-		await aiscript.exec(ast);
+		await tonerikoScript.exec(ast);
 	} catch (err) {
-		// 実行時のエラーは err で通知されるので、ここに来るのは AiScript 内部のエラーだけ。
+		// 実行時のエラーは err で通知されるので、ここに来るのは Toneriko Script の内部のエラーだけ。
 		os.alert({
 			type: 'error',
 			title: 'Internal Error',

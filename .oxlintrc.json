@@ -10,7 +10,7 @@
 		// 追加プラグインのルールは指摘を 1 件ずつ確認し、誤検出が大半のものと好みの書き方だけのものを外している。
 		// vitest は expect の第 2 引数にメッセージを取る。
 		"vitest/valid-expect": ["error", { "maxArgs": 2 }],
-		// 内部で expect / assert する補助関数。aiscript は取り込んだパッケージで next 等の汎用名を使うため overrides で外す。
+		// 内部で expect / assert する補助関数。
 		"vitest/expect-expect": [
 			"error",
 			{
@@ -54,7 +54,7 @@
 		// 再帰描画する Vue コンポーネントの自己 import と、Vite の public 資産の絶対パス import。
 		"import/no-self-import": "off",
 		"import/no-absolute-path": "off",
-		// 意図した thenable (db/bun-sql.ts) と aiscript の AST の then フィールド。
+		// 意図した thenable (db/bun-sql.ts)。
 		"unicorn/no-thenable": "off",
 		// 条件付きプロパティの spread や文字列の分解まで不要と判定する。
 		"unicorn/no-useless-spread": "off",
@@ -169,66 +169,5 @@
 		"packages/frontend/src/**/*.stories.impl.ts",
 		// フォークから写したもの。lint はフォークで行う
 		"packages/sugar-high/**"
-	],
-	"overrides": [
-		{
-			// 取り込んだパッケージで独自の書き方を持つ。検証補助は汎用名 (next 等) を使う。
-			"files": ["packages/aiscript/**"],
-			"rules": {
-				"vitest/expect-expect": "off",
-				"prefer-const": "off",
-				"radix": "off",
-				"no-fallthrough": "off",
-				"no-case-declarations": "off",
-				"no-self-compare": "off",
-				"array-callback-return": "off",
-				"no-prototype-builtins": "off",
-				"prefer-promise-reject-errors": "off",
-				"no-template-curly-in-string": "off",
-				"default-param-last": "off",
-				"no-return-assign": "off",
-				"no-new-func": "off",
-				"no-lone-blocks": "off",
-				"prefer-object-has-own": "off",
-				"prefer-object-spread": "off",
-				"prefer-exponentiation-operator": "off",
-				"yoda": "off",
-				"no-else-return": "off",
-				"prefer-arrow-callback": "off",
-				"prefer-rest-params": "off",
-				"object-shorthand": "off",
-				"typescript/consistent-type-imports": "off",
-				"typescript/consistent-type-assertions": "off",
-				"typescript/consistent-generic-constructors": "off",
-				"typescript/no-inferrable-types": "off",
-				"typescript/prefer-for-of": "off",
-				"typescript/no-empty-interface": "off",
-				"typescript/prefer-function-type": "off",
-				"typescript/no-import-type-side-effects": "off",
-				"import/no-duplicates": "off",
-				"import/consistent-type-specifier-style": "off",
-				"unicorn/prefer-node-protocol": "off",
-				"unicorn/prefer-optional-catch-binding": "off",
-				"unicorn/throw-new-error": "off",
-				"unicorn/prefer-date-now": "off",
-				"unicorn/prefer-regexp-test": "off",
-				"unicorn/prefer-string-replace-all": "off",
-				"unicorn/prefer-includes": "off",
-				"unicorn/prefer-array-some": "off",
-				"unicorn/no-useless-promise-resolve-reject": "off",
-				"unicorn/consistent-existence-index-check": "off",
-				"unicorn/prefer-negative-index": "off",
-				"unicorn/no-useless-collection-argument": "off",
-				"unicorn/prefer-object-from-entries": "off",
-				"vitest/prefer-to-be": "off",
-				"vitest/prefer-to-have-length": "off",
-				"vitest/no-duplicate-hooks": "off",
-				"vitest/prefer-hooks-on-top": "off",
-				"vitest/prefer-mock-return-shorthand": "off",
-				"vue/next-tick-style": "off",
-				"promise/no-return-wrap": "off",
-				"node/no-path-concat": "off"
-			}
-		}
 	]
 }

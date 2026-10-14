@@ -40,7 +40,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import * as Misskey from 'misskey-js';
-import { AISCRIPT_VERSION } from '@syuilo/aiscript';
+import { TONERIKO_SCRIPT_VERSION } from 'toneriko-script';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -53,7 +53,7 @@ import MkSelect from '@/components/form/MkSelect.vue';
 import { useMkSelect } from '@/composables/useMkSelect.js';
 import { useRouter } from '@/composables/useRouter.js';
 
-const PRESET_DEFAULT = `/// @ ${AISCRIPT_VERSION}
+const PRESET_DEFAULT = `/// @ ${TONERIKO_SCRIPT_VERSION}
 
 var name = ""
 
@@ -71,7 +71,7 @@ Ui:render([
 ])
 `;
 
-const PRESET_OMIKUJI = `/// @ ${AISCRIPT_VERSION}
+const PRESET_OMIKUJI = `/// @ ${TONERIKO_SCRIPT_VERSION}
 // ユーザーごとに日替わりのおみくじのプリセット
 
 let choices = [
@@ -110,7 +110,7 @@ Ui:render([
 ])
 `;
 
-const PRESET_SHUFFLE = `/// @ ${AISCRIPT_VERSION}
+const PRESET_SHUFFLE = `/// @ ${TONERIKO_SCRIPT_VERSION}
 // 巻き戻し可能な文字シャッフルのプリセット
 
 let string = "ペペロンチーノ"
@@ -189,7 +189,7 @@ var cursor = 0
 main()
 `;
 
-const PRESET_QUIZ = `/// @ ${AISCRIPT_VERSION}
+const PRESET_QUIZ = `/// @ ${TONERIKO_SCRIPT_VERSION}
 let title = '地理クイズ'
 
 let qas = [{
@@ -302,7 +302,7 @@ qaEls.push(Ui:C:container({
 Ui:render(qaEls)
 `;
 
-const PRESET_TIMELINE = `/// @ ${AISCRIPT_VERSION}
+const PRESET_TIMELINE = `/// @ ${TONERIKO_SCRIPT_VERSION}
 // APIリクエストを行いローカルタイムラインを表示するプリセット
 
 @fetch() {

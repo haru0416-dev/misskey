@@ -18,7 +18,7 @@
 | `types/` | 複数の層から参照する型だけ |
 | `ui/` | アプリのシェルとレイアウト |
 | `widgets/` | ウィジェットの実行環境と、各ウィジェット |
-| `aiscript/` | AiScript の実行環境との接続(API と UI の定義) |
+| `toneriko-script/` | Toneriko Script の実行環境との接続(API と UI の定義) |
 | `stories/` | コンポーネントのカタログとテストで使う、story の共通部品 |
 | `workers/` | Web Worker の入口 |
 

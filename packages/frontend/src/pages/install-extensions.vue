@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { ref, computed, nextTick } from 'vue';
 import type { Extension } from '@/features/extension/components/MkExtensionInstaller.vue';
-import type { AiScriptPluginMeta } from '@/plugin.js';
+import type { TonerikoScriptPluginMeta } from '@/plugin.js';
 import MkLoading from '@/components/global/MkLoading.vue';
 import MkExtensionInstaller from '@/features/extension/components/MkExtensionInstaller.vue';
 import MkButton from '@/components/form/MkButton.vue';
@@ -211,7 +211,7 @@ async function install() {
 				return;
 			}
 			try {
-				await installPlugin(data.value.raw, data.value.meta as AiScriptPluginMeta);
+				await installPlugin(data.value.raw, data.value.meta as TonerikoScriptPluginMeta);
 				os.success();
 				window.setTimeout(() => {
 					close_();

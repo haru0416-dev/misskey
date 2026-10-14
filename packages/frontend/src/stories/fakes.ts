@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { AISCRIPT_VERSION } from '@syuilo/aiscript';
+import { TONERIKO_SCRIPT_VERSION } from 'toneriko-script';
 import type { entities } from 'misskey-js';
 import { date, imageDataUrl, text } from './fake-utils.js';
 
@@ -157,7 +157,7 @@ export function file(isSensitive = false): entities.DriveFile {
 	};
 }
 
-const script = `/// @ ${AISCRIPT_VERSION}
+const script = `/// @ ${TONERIKO_SCRIPT_VERSION}
 
 var name = ""
 

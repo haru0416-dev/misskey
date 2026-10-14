@@ -12,11 +12,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { Interpreter, Parser } from '@syuilo/aiscript';
+import { Interpreter, Parser } from 'toneriko-script';
 import { useWidgetPropsManager } from './widget.js';
 import type { WidgetComponentEmits, WidgetComponentExpose, WidgetComponentProps } from './widget.js';
 import type { FormWithDefault, GetFormResultType } from '@/utility/form.js';
-import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import { tonerikoScriptReadline, alertTonerikoScriptError, createTonerikoScriptEnv, execTonerikoScriptWithAlert } from '@/toneriko-script/api.js';
 import { $i } from '@/i.js';
 import MkButton from '@/components/form/MkButton.vue';
 import { i18n } from '@/i18n.js';
@@ -56,12 +56,12 @@ const { widgetProps, configure } = useWidgetPropsManager(name,
 const parser = new Parser();
 
 async function run() {
-	const aiscript = new Interpreter(createAiScriptEnv({
+	const tonerikoScript = new Interpreter(createTonerikoScriptEnv({
 		storageKey: 'widget',
 		...($i?.token === undefined ? {} : { token: $i.token }),
 	}), {
-		in: aiScriptReadline,
-		err: alertAiScriptError,
+		in: tonerikoScriptReadline,
+		err: alertTonerikoScriptError,
 		out: (value) => {
 			// ウィジェットでは標準出力を使用しない。
 		},
@@ -70,7 +70,7 @@ async function run() {
 		},
 	});
 
-	await execAiScriptWithAlert(aiscript, parser, widgetProps.script);
+	await execTonerikoScriptWithAlert(tonerikoScript, parser, widgetProps.script);
 }
 
 defineExpose<WidgetComponentExpose>({

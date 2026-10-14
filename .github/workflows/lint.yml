@@ -11,7 +11,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - packages/aiscript/**
       - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
@@ -43,7 +42,6 @@ on:
       - .claude/**
       - .agents/**
       - .github/copilot-instructions.md
-      - packages/aiscript/**
       - packages/mfm-js/**
       - packages/backend/**
       - packages/frontend/**
@@ -177,7 +175,6 @@ jobs:
     strategy:
       matrix:
         workspace:
-          - '@syuilo/aiscript'
           - mfm-js
           - backend
           - frontend

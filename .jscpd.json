@@ -13,7 +13,6 @@
 		"**/*.stories.ts",
 		"**/*.stories.impl.ts",
 		"packages/backend/migration/**",
-		"packages/aiscript/**",
 		"packages/mfm-js/**"
 	]
 }

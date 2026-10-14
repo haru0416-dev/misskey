@@ -130,11 +130,11 @@ upstream の変更履歴と AiScript から引き継いだ文章は、AI の誤�
 | [`dev/sonarqube/README.md`](../dev/sonarqube/README.md) | 要修正: profile コマンドは .env を自動読込しない、NEW_PASSWORD 未定義、password 保存説明、gitignore による非コミット保証の過剰断定、現行 nofile 要件不足、認知的複雑度検出という目的と無効化 profile の不一致。local-only binding、自動起動 scanner、破棄コマンドの副作用表示、CI 非導入は一致。 |
 | [`docs/archive/upstream-changelog.md`](../docs/archive/upstream-changelog.md) | 3802 行のアーカイブです。2026.6.0 から 12.86.0 (2021/08/11) まで、全 release heading・外部/相対リンク・異常マーカー・秘密情報候補を検索しました。歴史的な機能契約を HEAD の実装と比較して誤りとする監査は行っていません。 |
 | [`locales/README.md`](../locales/README.md) | 日本語だけ手動編集する強い規則と Crowdin mapping は維持。verify が built locale を読むため、編集直後の検査には i18n build が先に必要です。Crowdin 実サービスの同期稼働はリポジトリから証明できず、設定上の流れと実稼働を分けると安全です。 |
-| [`packages/aiscript/docs/parser/overview.md`](../packages/aiscript/docs/parser/overview.md) | Scanner と parse の流れを確認。先読みと template 構文の例外に補足が必要です。文章は upstream にもあります。 |
-| [`packages/aiscript/docs/parser/scanner.md`](../packages/aiscript/docs/parser/scanner.md) | 先読み、token の消費、遅延した読み取りを確認。変更を求める不一致はありませんでした。 |
-| [`packages/aiscript/docs/parser/token-streams.md`](../packages/aiscript/docs/parser/token-streams.md) | template の token 列と解析を確認。TokenStrem は TokenStream の誤記で、upstream にも同じ表記があります。 |
-| [`packages/aiscript/docs/README.md`](../packages/aiscript/docs/README.md) | リンクと parser 文書の役割を確認。upstream の言語仕様が fork のすべての拡張を保証するとは扱っていません。 |
-| [`packages/aiscript/README.md`](../packages/aiscript/README.md) | 公開 API、license、実行 script を確認。start と parse の作業ディレクトリと build の前提に補足が必要です。 |
+| [`toneriko-dev/toneriko-script/docs/parser/overview.md`](https://github.com/toneriko-dev/toneriko-script/blob/main/docs/parser/overview.md) | Scanner と parse の流れを確認。先読みと template 構文の例外に補足が必要です。文章は upstream にもあります。 |
+| [`toneriko-dev/toneriko-script/docs/parser/scanner.md`](https://github.com/toneriko-dev/toneriko-script/blob/main/docs/parser/scanner.md) | 先読み、token の消費、遅延した読み取りを確認。変更を求める不一致はありませんでした。 |
+| [`toneriko-dev/toneriko-script/docs/parser/token-streams.md`](https://github.com/toneriko-dev/toneriko-script/blob/main/docs/parser/token-streams.md) | template の token 列と解析を確認。TokenStrem は TokenStream の誤記で、upstream にも同じ表記があります。 |
+| [`toneriko-dev/toneriko-script/docs/README.md`](https://github.com/toneriko-dev/toneriko-script/blob/main/docs/README.md) | リンクと parser 文書の役割を確認。upstream の言語仕様が fork のすべての拡張を保証するとは扱っていません。 |
+| [`toneriko-dev/toneriko-script/README.md`](https://github.com/toneriko-dev/toneriko-script/blob/main/README.md) | 公開 API、license、実行 script を確認。start と parse の作業ディレクトリと build の前提に補足が必要です。 |
 | [`packages/backend/migration/_legacy/README.md`](../packages/backend/migration/_legacy/README.md) | 変更なし推奨。実際に up/down JavaScript が存在し、現行 runner は journal SQL のみ読む。『含まれる』は legacy 適用後の最終 schema の統合という意味なら妥当で、全過去 DDL を現行に再現する意味にはしない。 |
 | [`packages/backend/README.md`](../packages/backend/README.md) | Bun/Hono/drizzle/BullMQ、process budget、queue cleanup 数値・権限を照合。initial SQL の『種別順』説明は実際の table/index 交互構成と不一致。migration 実行の副作用と既存 schema 拒否の実装表現には補足余地。 |
 | [`packages/backend/src/misc/prelude/README.md`](../packages/backend/src/misc/prelude/README.md) | 変更なしでも機能概要は真。ただし array.ts の unique/maximum/toArray/toSingle が一覧から漏れる。time/url/xml の関数と Misskey 依存がないことを確認。 |

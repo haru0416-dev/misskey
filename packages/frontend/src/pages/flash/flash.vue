@@ -63,19 +63,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, onDeactivated, onUnmounted, ref, watch, shallowRef, defineAsyncComponent } from 'vue';
 import * as Misskey from 'misskey-js';
-import { Interpreter, Parser, values } from '@syuilo/aiscript';
+import { Interpreter, Parser, values } from 'toneriko-script';
 import { url } from '@/shared/utility/config.js';
 import type { Ref } from 'vue';
-import type { AsUiComponent, AsUiRoot } from '@/aiscript/ui.js';
+import type { AsUiComponent, AsUiRoot } from '@/toneriko-script/ui.js';
 import MkButton from '@/components/form/MkButton.vue';
 import * as os from '@/os.js';
 import { getOthersContentMenuItems } from '@/features/abuse-report/get-others-content-menu.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import MkAsUi from '@/aiscript/components/MkAsUi.vue';
-import { registerAsUiLib } from '@/aiscript/ui.js';
-import { aiScriptReadline, alertAiScriptError, createAiScriptEnv, execAiScriptWithAlert } from '@/aiscript/api.js';
+import MkAsUi from '@/toneriko-script/components/MkAsUi.vue';
+import { registerAsUiLib } from '@/toneriko-script/ui.js';
+import { tonerikoScriptReadline, alertTonerikoScriptError, createTonerikoScriptEnv, execTonerikoScriptWithAlert } from '@/toneriko-script/api.js';
 import MkFolder from '@/components/layout/MkFolder.vue';
 import MkCode from '@/features/code/components/MkCode.vue';
 import { prefer } from '@/preferences.js';
@@ -174,7 +174,7 @@ async function unlike() {
 watch(() => props.id, fetchFlash, { immediate: true });
 
 const started = ref(false);
-const aiscript = shallowRef<Interpreter | null>(null);
+const tonerikoScript = shallowRef<Interpreter | null>(null);
 const root = ref<AsUiRoot>();
 const components = ref<Ref<AsUiComponent>[]>([]);
 
@@ -184,8 +184,8 @@ function start() {
 }
 
 async function run() {
-	if (aiscript.value) {
-		aiscript.value.abort();
+	if (tonerikoScript.value) {
+		tonerikoScript.value.abort();
 	}
 	if (!flash.value) {
 		return;
@@ -197,7 +197,7 @@ async function run() {
 
 	const interpreter = new Interpreter(
 		{
-			...createAiScriptEnv({
+			...createTonerikoScriptEnv({
 				storageKey: 'flash:' + flash.value.id,
 			}),
 			...registerAsUiLib(components.value, (_root) => {
@@ -207,8 +207,8 @@ async function run() {
 			THIS_URL: values.STR(`${url}/play/${flash.value.id}`),
 		},
 		{
-			in: aiScriptReadline,
-			err: alertAiScriptError,
+			in: tonerikoScriptReadline,
+			err: alertTonerikoScriptError,
 			out: () => {
 				// Play では標準出力を表示しない。
 			},
@@ -218,9 +218,9 @@ async function run() {
 		},
 	);
 
-	aiscript.value = interpreter;
+	tonerikoScript.value = interpreter;
 
-	await execAiScriptWithAlert(interpreter, parser, flash.value.script);
+	await execTonerikoScriptWithAlert(interpreter, parser, flash.value.script);
 }
 
 function showMenu(ev: PointerEvent) {
@@ -239,8 +239,8 @@ function showMenu(ev: PointerEvent) {
 }
 
 function reset() {
-	if (aiscript.value) {
-		aiscript.value.abort();
+	if (tonerikoScript.value) {
+		tonerikoScript.value.abort();
 	}
 	started.value = false;
 }

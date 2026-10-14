@@ -56,25 +56,25 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <script lang="ts" setup>
 import { onDeactivated, onUnmounted, ref, watch, computed } from 'vue';
-import { Interpreter, Parser, utils } from '@syuilo/aiscript';
+import { Interpreter, Parser, utils } from 'toneriko-script';
 import type { Ref } from 'vue';
-import type { AsUiComponent,AsUiRoot } from '@/aiscript/ui.js';
-import type { Value } from '@syuilo/aiscript/interpreter/value.js';
+import type { AsUiComponent,AsUiRoot } from '@/toneriko-script/ui.js';
+import type { Value } from 'toneriko-script/interpreter/value.js';
 import MkContainer from '@/components/layout/MkContainer.vue';
 import MkButton from '@/components/form/MkButton.vue';
 import MkTextarea from '@/components/form/MkTextarea.vue';
 import MkCodeEditor from '@/features/code/components/MkCodeEditor.vue';
-import { aiScriptReadline, alertAiScriptError, createAiScriptEnv } from '@/aiscript/api.js';
+import { tonerikoScriptReadline, alertTonerikoScriptError, createTonerikoScriptEnv } from '@/toneriko-script/api.js';
 import * as os from '@/os.js';
 import { $i } from '@/i.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
-import { registerAsUiLib } from '@/aiscript/ui.js';
-import MkAsUi from '@/aiscript/components/MkAsUi.vue';
+import { registerAsUiLib } from '@/toneriko-script/ui.js';
+import MkAsUi from '@/toneriko-script/components/MkAsUi.vue';
 import { miLocalStorage } from '@/local-storage.js';
 
 const parser = new Parser();
-let aiscript: Interpreter;
+let tonerikoScript: Interpreter;
 const code = ref('');
 const logs = ref<
 	{
@@ -106,16 +106,16 @@ function stringifyUiProps(uiProps: AsUiComponent) {
 }
 
 async function run() {
-	if (aiscript) {
-		aiscript.abort();
+	if (tonerikoScript) {
+		tonerikoScript.abort();
 	}
 	root.value = undefined;
 	components.value = [];
 	uiKey.value++;
 	logs.value = [];
-	aiscript = new Interpreter(
+	tonerikoScript = new Interpreter(
 		{
-			...createAiScriptEnv({
+			...createTonerikoScriptEnv({
 				storageKey: 'widget',
 				...($i?.token === undefined ? {} : { token: $i.token }),
 			}),
@@ -124,7 +124,7 @@ async function run() {
 			}),
 		},
 		{
-			in: aiScriptReadline,
+			in: tonerikoScriptReadline,
 			out: (value) => {
 				logs.value.push({
 					id: Math.random(),
@@ -132,7 +132,7 @@ async function run() {
 					print: true,
 				});
 			},
-			err: alertAiScriptError,
+			err: alertTonerikoScriptError,
 			log: (type, params) => {
 				switch (type) {
 					case 'end':
@@ -161,9 +161,9 @@ async function run() {
 		return;
 	}
 	try {
-		await aiscript.exec(ast);
+		await tonerikoScript.exec(ast);
 	} catch (err) {
-		// 実行時エラーは err コールバックで通知するため、ここで捕捉するのは AiScript 内部エラーだけ。
+		// 実行時エラーは err コールバックで通知するため、ここで捕捉するのは Toneriko Script の内部のエラーだけ。
 		os.alert({
 			type: 'error',
 			title: 'Internal Error',
@@ -173,14 +173,14 @@ async function run() {
 }
 
 onDeactivated(() => {
-	if (aiscript) {
-		aiscript.abort();
+	if (tonerikoScript) {
+		tonerikoScript.abort();
 	}
 });
 
 onUnmounted(() => {
-	if (aiscript) {
-		aiscript.abort();
+	if (tonerikoScript) {
+		tonerikoScript.abort();
 	}
 });
 

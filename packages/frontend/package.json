@@ -27,7 +27,6 @@
 		"@opentelemetry/sdk-trace-web": "2.11.0",
 		"@opentelemetry/semantic-conventions": "1.43.0",
 		"@simplewebauthn/browser": "14.0.0",
-		"@syuilo/aiscript": "workspace:*",
 		"@tanstack/vue-query": "5.104.1",
 		"@tanstack/vue-virtual": "3.13.39",
 		"canvas-confetti": "1.9.4",
@@ -53,6 +52,7 @@
 		"sugar-high": "workspace:*",
 		"throttle-debounce": "5.0.2",
 		"tinycolor2": "1.6.0",
+		"toneriko-script": "github:toneriko-dev/toneriko-script#v1.2.1",
 		"vue": "3.5.43",
 		"wanakana": "5.3.1"
 	},
