@@ -74,7 +74,7 @@ function applyProductBranding<T extends ILocale>(obj: T, parentPath = ''): T {
 				.replaceAll(reversiHashtag, '#MisskeyReversi')
 				.replaceAll(misskeyMisskey, 'Misskey-Misskey');
 			if (path === 'repositoryUrlDescription') {
-				brandedValue = brandedValue.replaceAll('https://github.com/misskey-dev/misskey', 'https://github.com/haru0416-dev/misskey');
+				brandedValue = brandedValue.replaceAll('https://github.com/misskey-dev/misskey', 'https://github.com/toneriko-dev/toneriko');
 			}
 			mutableObj[key] = brandedValue;
 		} else if (typeof value === 'object') {

@@ -56,12 +56,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<template #label>{{ i18n.ts._aboutToneriko.development }}</template>
 					<div class="_gaps_s">
 						<div :class="$style.developmentDescription">{{ i18n.ts._aboutToneriko.developmentDescription }}</div>
-						<FormLink to="https://github.com/haru0416-dev/misskey" external>
+						<FormLink to="https://github.com/toneriko-dev/toneriko" external>
 							<template #icon><i class="ti ti-code"></i></template>
 							{{ i18n.ts._aboutToneriko.source }}
 							<template #suffix>GitHub</template>
 						</FormLink>
-						<FormLink to="https://github.com/haru0416-dev/misskey/releases" external>
+						<FormLink to="https://github.com/toneriko-dev/toneriko/releases" external>
 							<template #icon><i class="ti ti-tag"></i></template>
 							{{ i18n.ts._aboutToneriko.releases }}
 							<template #suffix>GitHub</template>

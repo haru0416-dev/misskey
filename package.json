@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/haru0416-dev/misskey.git"
+		"url": "https://github.com/toneriko-dev/toneriko.git"
 	},
 	"packageManager": "bun@1.4.3",
 	"workspaces": [

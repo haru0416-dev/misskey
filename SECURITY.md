@@ -5,11 +5,11 @@
 脆弱性を見つけた場合、**通常の Issue や Pull Request には書かないでください**。
 修正がリリースされる前に詳細が公開され、稼働中のサーバーが危険に晒されます。
 
-このリポジトリの [Security advisories](https://github.com/haru0416-dev/misskey/security/advisories/new) から
+このリポジトリの [Security advisories](https://github.com/toneriko-dev/toneriko/security/advisories/new) から
 非公開で報告してください。
 
 Please report vulnerabilities privately through this repository's
-[Security advisories](https://github.com/haru0416-dev/misskey/security/advisories/new),
+[Security advisories](https://github.com/toneriko-dev/toneriko/security/advisories/new),
 **not** through public Issues or Pull Requests.
 
 報告には次の内容を含めてください。

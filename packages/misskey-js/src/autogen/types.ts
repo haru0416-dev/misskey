@@ -5367,9 +5367,9 @@ export type components = {
             description: string | null;
             langs: string[];
             tosUrl: string | null;
-            /** @default https://github.com/haru0416-dev/misskey */
+            /** @default https://github.com/toneriko-dev/toneriko */
             repositoryUrl: string | null;
-            /** @default https://github.com/haru0416-dev/misskey/issues/new */
+            /** @default https://github.com/toneriko-dev/toneriko/issues/new */
             feedbackUrl: string | null;
             defaultDarkTheme: string | null;
             defaultLightTheme: string | null;

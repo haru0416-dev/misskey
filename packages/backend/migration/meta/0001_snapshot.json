@@ -5723,14 +5723,14 @@
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false,
-          "default": "'https://github.com/haru0416-dev/misskey'"
+          "default": "'https://github.com/toneriko-dev/toneriko'"
         },
         "feedbackUrl": {
           "name": "feedbackUrl",
           "type": "varchar(1024)",
           "primaryKey": false,
           "notNull": false,
-          "default": "'https://github.com/haru0416-dev/misskey/issues/new'"
+          "default": "'https://github.com/toneriko-dev/toneriko/issues/new'"
         },
         "impressumUrl": {
           "name": "impressumUrl",

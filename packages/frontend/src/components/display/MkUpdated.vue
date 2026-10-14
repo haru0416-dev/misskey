@@ -34,7 +34,7 @@ const isBeta = version.includes('-beta') || version.includes('-alpha') || versio
 
 function whatIsNew() {
 	modal.value?.close();
-	window.open(`https://github.com/haru0416-dev/misskey/releases/tag/${version}`, '_blank');
+	window.open(`https://github.com/toneriko-dev/toneriko/releases/tag/${version}`, '_blank');
 }
 
 onMounted(() => {

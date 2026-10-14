@@ -69,13 +69,13 @@ export const packedMetaLiteSchema = {
 			type: 'string',
 			optional: false,
 			nullable: true,
-			default: 'https://github.com/haru0416-dev/misskey',
+			default: 'https://github.com/toneriko-dev/toneriko',
 		},
 		feedbackUrl: {
 			type: 'string',
 			optional: false,
 			nullable: true,
-			default: 'https://github.com/haru0416-dev/misskey/issues/new',
+			default: 'https://github.com/toneriko-dev/toneriko/issues/new',
 		},
 		defaultDarkTheme: {
 			type: 'string',
