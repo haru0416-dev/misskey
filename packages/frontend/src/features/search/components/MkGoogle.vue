@@ -5,7 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <template>
 <search>
-	<form :class="$style.root" @submit.prevent="search">
+	<form :class="$style.root" @submit.prevent="openSearch">
 		<input v-model="query" :class="$style.input" type="search" :placeholder="q" :aria-label="i18n.ts.search">
 		<button type="submit" :class="$style.button"><i class="ti ti-search"></i> {{ i18n.tsx.searchUsingProvider({ provider: searchEngineLabel }) }}</button>
 	</form>
@@ -25,7 +25,7 @@ const props = defineProps<{
 const query = ref(props.q);
 const searchEngineLabel = computed(() => i18n.ts._searchEngine[prefer.searchEngine]);
 
-const search = () => {
+const openSearch = () => {
 	window.open(createSearchUrl(prefer.searchEngine, query.value), '_blank', 'noopener');
 };
 </script>

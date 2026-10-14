@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import path from 'node:path';
 import pluginVue from '@vitejs/plugin-vue';
+import type { Options as VueOptions } from '@vitejs/plugin-vue';
 import pluginGlsl from 'vite-plugin-glsl';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { PluginOption, ServerOptions, UserConfig } from 'vite';
@@ -60,6 +61,18 @@ function getBundleVisualizerPlugin(): PluginOption[] {
 
 	return plugins;
 }
+
+/**
+ * Vue のテンプレートで HTML の要素として扱う要素。Vue が知らない要素は部品として解決しようとし、
+ * <script setup> に同じ名前の変数があるとそれを部品として描く。
+ */
+export const vueOptions: VueOptions = {
+	template: {
+		compilerOptions: {
+			isCustomElement: (tag) => tag === 'search',
+		},
+	},
+};
 
 export const searchIndexes = [
 	{
@@ -205,7 +218,7 @@ export function getConfig(): UserConfig {
 		plugins: [
 			pluginWatchLocales(),
 			...searchIndexes.map((options) => pluginCreateSearchIndex(options)),
-			pluginVue(),
+			pluginVue(vueOptions),
 			pluginRewriteChunks([removeUnrefI18n(), unwindCssModules]),
 			pluginBootLoader({ entry: 'src/loader/main.ts', css: 'src/loader/main.css' }),
 			pluginJson5(),

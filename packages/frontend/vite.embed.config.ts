@@ -13,7 +13,7 @@ import pluginJson5 from './builder/vite-plugin-json5.js';
 import { removeUnrefI18n } from './builder/remove-unref-i18n.js';
 import { pluginRewriteChunks } from './builder/rewrite-chunks.js';
 import { pluginBootLoader } from './builder/vite-plugin-boot-loader.js';
-import { getDevServerConfig, getSharedConfig } from './vite.config.js';
+import { getDevServerConfig, getSharedConfig, vueOptions } from './vite.config.js';
 
 export function getEmbedConfig(): UserConfig {
 	const { output, ...shared } = getSharedConfig();
@@ -33,7 +33,7 @@ export function getEmbedConfig(): UserConfig {
 		},
 
 		plugins: [
-			pluginVue(),
+			pluginVue(vueOptions),
 			pluginRewriteChunks([removeUnrefI18n()]),
 			pluginBootLoader({ entry: 'src/loader/embed.ts', css: 'src/loader/embed.css' }),
 			pluginJson5(),
