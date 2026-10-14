@@ -32,6 +32,7 @@
 - Enhance: バージョンのタグ (`v*`) を付けると、GitHub Container Registry に amd64 / arm64 の Docker イメージを公開するように
 - Enhance: ノートの翻訳で CW も翻訳するように
 - Enhance: MFMのパースを高速化（構文を始め得ない文字は候補を試さずに読み進め、構文を始め得る位置では先頭の文字で成立し得る構文だけを試すように。出力は従来と同一）
+- Enhance: MFM のパースをさらに高速化 (パーサーを parser combinator から手書きの関数に置き換え、装飾の多い 186 字のノートで 27.8 µs から 3.1 µs。閉じない記号が並ぶ入力で長さの 2 乗の時間がかかる経路も減らした。出力は従来と同一)
 - Enhance: エラー・トレース収集をSentryからOpenTelemetry OTLPへ移行 (外向きのtrace伝播は既定で行わず、伝播先とinstrumentationの無効化を個別に設定可能)
 - Enhance: ノート翻訳サービスとしてセルフホスト可能なLibreTranslateに対応
 - Enhance: 非推奨だった `read:messaging` / `write:messaging` API 権限スコープを削除

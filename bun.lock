@@ -52,7 +52,7 @@
         "ipaddr.js": "2.5.0",
         "is-svg": "6.1.0",
         "jsonld": "9.0.0",
-        "mfm-js": "github:toneriko-dev/mfm-js#v0.26.0",
+        "mfm-js": "github:toneriko-dev/mfm-js#v0.26.1",
         "mime-types": "3.0.2",
         "misskey-js": "workspace:*",
         "node-html-parser": "9.0.4",
@@ -122,7 +122,7 @@
         "json5": "2.2.3",
         "matter-js": "0.20.0",
         "mediabunny": "1.61.3",
-        "mfm-js": "github:toneriko-dev/mfm-js#v0.26.0",
+        "mfm-js": "github:toneriko-dev/mfm-js#v0.26.1",
         "misskey-js": "workspace:*",
         "pinia": "4.0.3",
         "qr-code-styling": "1.9.2",
@@ -1591,7 +1591,7 @@
 
     "mediabunny": ["mediabunny@1.61.3", "", { "dependencies": { "@types/dom-mediacapture-transform": "^0.1.11", "@types/dom-webcodecs": "0.1.13" } }, "sha512-kUqLKVXQVwHR62GkOJxYosAmXERJbqnXBgJDTtRlxHEYviVkMg/Evhl9XN6kedqS5LP1tV4kFKyzY/V4a4ofow=="],
 
-    "mfm-js": ["mfm-js@github:toneriko-dev/mfm-js#97f6aa1", { "dependencies": { "@misskey-dev/emoji-data": "17.0.6" } }, "toneriko-dev-mfm-js-97f6aa1", "sha512-wwctigObPIWeCnjemfpo/1inFaF4wiz/mgdy6zZUpgDX8Z4xNODH588R/sLto5jP59jEC0+B6+hP7xucYOiuPQ=="],
+    "mfm-js": ["mfm-js@github:toneriko-dev/mfm-js#9144dc5", { "dependencies": { "@misskey-dev/emoji-data": "17.0.6" } }, "toneriko-dev-mfm-js-9144dc5", "sha512-l89sbOmFPiptVhS+TunvZf6531+dE33+gZ0kOxXrq2xFO7s3DEvpHNrQiB+Q2gs7t7a7H2+jvAznMJKCX3FLag=="],
 
     "mime-db": ["mime-db@1.54.0", "", {}, "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ=="],
 
