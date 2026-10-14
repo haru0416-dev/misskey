@@ -52,7 +52,7 @@
 		"sugar-high": "workspace:*",
 		"throttle-debounce": "5.0.2",
 		"tinycolor2": "1.6.0",
-		"toneriko-script": "github:toneriko-dev/toneriko-script#v1.2.1",
+		"toneriko-script": "github:toneriko-dev/toneriko-script#v1.3.0",
 		"vue": "3.5.43",
 		"wanakana": "5.3.1"
 	},

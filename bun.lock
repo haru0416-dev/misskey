@@ -131,7 +131,7 @@
         "sugar-high": "workspace:*",
         "throttle-debounce": "5.0.2",
         "tinycolor2": "1.6.0",
-        "toneriko-script": "github:toneriko-dev/toneriko-script#v1.2.1",
+        "toneriko-script": "github:toneriko-dev/toneriko-script#v1.3.0",
         "vue": "3.5.43",
         "wanakana": "5.3.1",
       },
@@ -1971,7 +1971,7 @@
 
     "token-types": ["token-types@6.1.2", "", { "dependencies": { "@borewit/text-codec": "0.2.2", "@tokenizer/token": "0.3.0", "ieee754": "1.2.1" } }, "sha512-dRXchy+C0IgK8WPC6xvCHFRIWYUbqqdEIKPaKo/AcTUNzwLTK6AH7RjdLWsEZcAN/TBdtfUw3PYEgPr5VPr6ww=="],
 
-    "toneriko-script": ["toneriko-script@github:toneriko-dev/toneriko-script#3e4dd12", {}, "toneriko-dev-toneriko-script-3e4dd12", "sha512-uUfplO/0PMmAkdNg6Ak1VLkD9ccQjPd+xHxnMS5TqQyng3Zpxo2WKF5V9PtrdxnkjKqJ/eJEM1wiBvt0C45qyA=="],
+    "toneriko-script": ["toneriko-script@github:toneriko-dev/toneriko-script#a32c910", {}, "toneriko-dev-toneriko-script-a32c910", "sha512-4rKoe56Ehla+xyWnUa4m6cCWsJIyqDg6FZvksaEx1/qz1K+mn+rFLBjrbVGmwfkcHkxuJfnCg1bGdCZDJ0DmOg=="],
 
     "totalist": ["totalist@3.0.1", "", {}, "sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ=="],
 
